@@ -81,7 +81,9 @@ export default {
       return h(SubMenu, { key: menu.path ? menu.path : 'submenu_' + pIndex + '_' + index }, subItem.concat(itemArr))
     },
     renderItem: function(h, menu, pIndex, index) {
+      console.log(menu)
       if (!menu.hidden) {
+        
         return menu.children && !menu.alwaysShow
           ? this.renderSubMenu(h, menu, pIndex, index)
           : this.renderMenuItem(h, menu, pIndex, index)

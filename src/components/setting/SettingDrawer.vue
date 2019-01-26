@@ -184,9 +184,11 @@
         vm.visible = false
       }, 16)
       // 当主题色不是默认色时，才进行主题编译
+      console.log(this.primaryColor,'primaryColor')
       if (this.primaryColor !== config.primaryColor) {
         updateTheme(this.primaryColor)
       }
+      console.log(this.colorWeak)
       if (this.colorWeak !== config.colorWeak) {
         updateColorWeak(this.colorWeak)
       }
@@ -218,6 +220,7 @@
         this.$store.dispatch('ToggleContentWidth', type)
       },
       changeColor (color) {
+        
         if (this.primaryColor !== color) {
           this.$store.dispatch('ToggleColor', color)
           updateTheme(color)
@@ -265,7 +268,7 @@
           padding-top: 15px;
           padding-left: 24px;
           height: 100%;
-          color: #1890ff;
+          color: #5873c9;
           font-size: 14px;
           font-weight: 700;
         }
@@ -293,7 +296,7 @@
   .setting-drawer-index-handle {
     position: absolute;
     top: 240px;
-    background: #1890ff;
+    background: #5873c9;
     width: 48px;
     height: 48px;
     right: 300px;

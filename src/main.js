@@ -4,6 +4,14 @@ import Storage from 'vue-ls'
 import router from './router'
 import store from './store/'
 
+
+import VueApollo from 'vue-apollo'
+import { ApolloClient } from 'apollo-client'
+import { HttpLink } from 'apollo-link-http'
+import { InMemoryCache } from 'apollo-cache-inmemory'
+import {ApolloLink} from 'apollo-link'
+
+
 import { VueAxios } from '@/utils/request'
 
 import Antd from 'ant-design-vue'
@@ -29,6 +37,54 @@ import {
 } from '@/store/mutation-types'
 import config from '@/defaultSettings'
 
+
+
+
+
+
+
+
+
+
+
+
+// 与 API 的 HTTP 连接
+const httpLink = new HttpLink({
+  // 你需要在这里使用绝对路径
+  // uri: 'http://192.168.2.32:4466/'
+  uri:'http://115.159.158.108:4466/'
+})
+
+const middlewareLink = new ApolloLink((operation, forward) => {
+  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIiLCJpYXQiOjE1NDc3ODg3NzZ9.N__rYip33R9Y749bi3e0v4MR4_ntK9jXxp47nRqWMmY'
+  operation.setContext({
+    headers: {
+      Authorization: `Bearer ${token}` || null
+    }
+  })
+  return forward(operation)
+})
+
+// 缓存实现
+const cache = new InMemoryCache()
+
+// 创建 apollo 客户端
+const apolloClient = new ApolloClient({
+  link: middlewareLink.concat(httpLink),
+  cache
+})
+
+const apolloProvider = new VueApollo({
+  defaultClient: apolloClient
+})
+
+
+
+
+
+
+
+
 Vue.config.productionTip = false
 
 Vue.use(Storage, config.storageOptions)
@@ -40,6 +96,7 @@ Vue.use(PermissionHelper)
 new Vue({
   router,
   store,
+  apolloProvider,
   created () {
     store.commit('SET_SIDEBAR_TYPE', Vue.ls.get(SIDEBAR_TYPE, true))
     store.commit('TOGGLE_THEME', Vue.ls.get(DEFAULT_THEME, config.navTheme))

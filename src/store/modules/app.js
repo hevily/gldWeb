@@ -48,6 +48,7 @@ const app = {
       state.layout = layout
     },
     TOGGLE_FIXED_HEADER: (state, fixed) => {
+      // debugger;
       Vue.ls.set(DEFAULT_FIXED_HEADER, fixed)
       state.fixedHeader = fixed
     },
@@ -89,6 +90,7 @@ const app = {
       commit('TOGGLE_LAYOUT_MODE', mode)
     },
     ToggleFixedHeader({ commit }, fixedHeader) {
+      // debugger;
       if (!fixedHeader) {
         commit('TOGGLE_FIXED_HEADER_HIDDEN', false)
       }

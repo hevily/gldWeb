@@ -1,3 +1,4 @@
+<!-- 内容页 -->
 <template>
   <div :style="!$route.meta.pageHeader ? 'margin: -24px -24px 0px;' : null">
     <!-- pageHeader , route meta hideHeader:true on hide -->

@@ -1,9 +1,16 @@
 <template>
   <div class="user-wrapper">
-    <span class="action">
+    <!-- <span class="action">
       <a-icon type="question-circle-o"></a-icon>
+      消息提醒
+    </span> -->
+    <span class="header-notice">
+      <a-badge count="12">
+        <a-icon style="font-size: 16px; padding: 4px" type="bell" />
+      </a-badge>
+      <span>消息提醒</span>
     </span>
-    <header-notice class="action"/>
+    <!-- <header-notice class="action"/> -->
     <a-dropdown>
       <span class="action ant-dropdown-link user-dropdown-menu">
         <a-avatar class="avatar" size="small" :src="avatar()"/>

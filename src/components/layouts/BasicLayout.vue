@@ -24,6 +24,7 @@
     },
     computed: {
       keepAlive () {
+        // debugger;
         return this.$route.meta.keepAlive
       }
     },

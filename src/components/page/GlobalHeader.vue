@@ -1,6 +1,7 @@
 <template>
   <!-- , width: fixedHeader ? `calc(100% - ${sidebarOpened ? 256 : 80}px)` : '100%'  -->
-  <a-layout-header v-if="!headerBarFixed" :class="[fixedHeader && 'ant-header-fixedHeader', sidebarOpened ? 'ant-header-side-opened' : 'ant-header-side-closed', ]" :style="{ padding: '0' }">
+  <a-layout-header v-if="!headerBarFixed" :class="[fixedHeader && 'ant-header-fixedHeader', sidebarOpened ? 'ant-header-side-opened' : 'ant-header-side-closed', ]" :style="{ 'padding': '0','height': device === 'mobile' ? '50px':'100px' }">
+    <!-- 侧边栏导航 -->
     <div v-if="mode === 'sidemenu'" class="header">
       <a-icon
         v-if="device==='mobile'"
@@ -15,23 +16,23 @@
 
       <user-menu></user-menu>
     </div>
+
+    <!-- 顶部栏导航 -->
     <div v-else :class="['top-nav-header-index', theme]">
-      <div class="header-index-wide">
+      <div class="header-index-wide" style="background:#5873c9">
         <div class="header-index-left">
           <logo class="top-nav-header" :show-title="device !== 'mobile'" />
-          <s-menu
-            v-if="device !== 'mobile'"
-            mode="horizontal"
-            :menu="menus"
-            :theme="theme"
-          ></s-menu>
+          
           <a-icon
-            v-else
+            v-if="device === 'mobile'"
             class="trigger"
             :type="collapsed ? 'menu-fold' : 'menu-unfold'"
             @click="toggle"></a-icon>
         </div>
         <user-menu class="header-index-right"></user-menu>
+      </div>
+      <div class="header-index-wide">
+        <s-menu v-if="device !== 'mobile'" mode="horizontal" :menu="menus" :theme="theme"></s-menu>
       </div>
     </div>
 
@@ -82,9 +83,11 @@
     data() {
       return {
         headerBarFixed: false,
+        // deHeight: '50px'
       }
     },
     mounted () {
+      // this.deHeight = this.
       window.addEventListener('scroll', this.handleScroll)
     },
     methods: {

@@ -47,11 +47,11 @@ module.exports = {
         modifyVars: {
           /* less 变量覆盖，用于自定义 ant design 主题 */
 
-          /*
-          'primary-color': '#F5222D',
-          'link-color': '#F5222D',
+          
+          'primary-color': '#5873c9',
+          'link-color': '#5873c9',
           'border-radius-base': '4px',
-          */
+          
         },
         javascriptEnabled: true,
       }

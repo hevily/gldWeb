@@ -1,4 +1,4 @@
-@primary-color: #1890ff;
+@primary-color: #5873c9;
 /* stylelint-disable at-rule-empty-line-before,at-rule-name-space-after,at-rule-no-unknown */
 /* stylelint-disable no-duplicate-selectors */
 /* stylelint-disable */
@@ -894,6 +894,7 @@ tinycolor.mostReadable = function(baseColor, colorList, args) {
 
     for (var i= 0; i < colorList.length ; i++) {
         readability = tinycolor.readability(baseColor, colorList[i]);
+        console.log(readability)
         if (readability > bestScore) {
             bestScore = readability;
             bestColor = tinycolor(colorList[i]);
@@ -1375,7 +1376,7 @@ this.tinycolor = tinycolor;
 @blue-3: color(~`colorPalette("@{blue-6}", 3)`);
 @blue-4: color(~`colorPalette("@{blue-6}", 4)`);
 @blue-5: color(~`colorPalette("@{blue-6}", 5)`);
-@blue-6: #1890ff;
+@blue-6: #5873c9;
 @blue-7: color(~`colorPalette("@{blue-6}", 7)`);
 @blue-8: color(~`colorPalette("@{blue-6}", 8)`);
 @blue-9: color(~`colorPalette("@{blue-6}", 9)`);

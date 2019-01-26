@@ -6,7 +6,24 @@
       :autoFormCreate="(form)=>{this.form = form}"
       id="formLogin"
     >
-      <a-tabs
+      <a-form-item
+        fieldDecoratorId="username"
+        :fieldDecoratorOptions="{rules: [{ required: true, message: '请输入帐户名或邮箱地址' }, { validator: this.handleUsernameOrEmail }], validateTrigger: 'change'}"
+      >
+        <a-input size="large" type="text" placeholder="帐户名或邮箱地址 / admin">
+          <a-icon slot="prefix" type="user" :style="{ color: 'rgba(0,0,0,.25)' }"/>
+        </a-input>
+      </a-form-item>
+
+      <a-form-item
+        fieldDecoratorId="password"
+        :fieldDecoratorOptions="{rules: [{ required: true, message: '请输入密码' }], validateTrigger: 'blur'}"
+      >
+        <a-input size="large" type="password" autocomplete="false" placeholder="密码 / admin">
+          <a-icon slot="prefix" type="lock" :style="{ color: 'rgba(0,0,0,.25)' }"/>
+        </a-input>
+      </a-form-item>
+      <!-- <a-tabs
         :activeKey="customActiveKey"
         :tabBarStyle="{ textAlign: 'center', borderBottom: 'unset' }"
         @change="handleTabClick"
@@ -62,8 +79,7 @@
             </a-col>
           </a-row>
         </a-tab-pane>
-      </a-tabs>
-
+      </a-tabs> -->
       <a-form-item>
         <a-checkbox v-model="formLogin.rememberMe">自动登陆</a-checkbox>
         <router-link
@@ -85,7 +101,7 @@
         >确定</a-button>
       </a-form-item>
 
-      <div class="user-login-other">
+      <!-- <div class="user-login-other">
         <span>其他登陆方式</span>
         <a>
           <a-icon class="item-icon" type="alipay-circle"></a-icon>
@@ -97,15 +113,15 @@
           <a-icon class="item-icon" type="weibo-circle"></a-icon>
         </a>
         <router-link class="register" :to="{ name: 'register' }">注册账户</router-link>
-      </div>
+      </div>-->
     </a-form>
 
-    <two-step-captcha
+    <!-- <two-step-captcha
       v-if="requiredTwoStepCaptcha"
       :visible="stepCaptchaVisible"
       @success="stepCaptchaSuccess"
       @cancel="stepCaptchaCancel"
-    ></two-step-captcha>
+    ></two-step-captcha>-->
   </div>
 </template>
 
@@ -146,6 +162,7 @@ export default {
     this.$http
       .get('/auth/2step-code')
       .then(res => {
+        // debugger
         this.requiredTwoStepCaptcha = res.result.stepCode
       })
       .catch(err => {
@@ -170,6 +187,7 @@ export default {
       // this.form.resetFields()
     },
     handleSubmit() {
+      // debugger
       const that = this
       let flag = false
 
@@ -203,11 +221,11 @@ export default {
       that
         .Login(loginParams)
         .then(() => {
-          if (that.requiredTwoStepCaptcha) {
+          // if (that.requiredTwoStepCaptcha) {
             that.stepCaptchaVisible = true
-          } else {
+          // } else {
             that.loginSuccess()
-          }
+          // }
         })
         .catch(err => {
           that.requestFailed(err)
@@ -261,7 +279,7 @@ export default {
     },
     loginSuccess() {
       this.loginBtn = false
-      this.$router.push({ name: 'dashboard' })
+      this.$router.push({ name: 'home' })
       this.$notification.success({
         message: '欢迎',
         description: `${timeFix()}，欢迎回来`
@@ -316,7 +334,7 @@ export default {
       transition: color 0.3s;
 
       &:hover {
-        color: #1890ff;
+        color: #5873c9;
       }
     }
 

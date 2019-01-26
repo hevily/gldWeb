@@ -1,8 +1,10 @@
 <template>
   <div class="logo">
-    <router-link :to="{name:'dashboard'}">
-      <img src="~@/assets/logo.svg" alt="logo">
+    <router-link :to="{name:'home'}">
+      <img src="~@/assets/logo.png" alt="logo">
+      <!-- <router-link to="/home"> -->
       <h1 v-if="showTitle">{{ title }}</h1>
+      <!-- </router-link> -->
     </router-link>
   </div>
 </template>
@@ -13,7 +15,7 @@
     props: {
       title: {
         type: String,
-        default: 'Ant Design Pro',
+        default: '咨询微平台',
         required: false
       },
       showTitle: {
