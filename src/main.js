@@ -9,6 +9,11 @@ import VueApollo from 'vue-apollo'
 import { ApolloClient } from 'apollo-client'
 import { HttpLink } from 'apollo-link-http'
 import { InMemoryCache } from 'apollo-cache-inmemory'
+
+import { split } from 'apollo-link'
+import { WebSocketLink } from 'apollo-link-ws'
+import { getMainDefinition } from 'apollo-utilities'
+
 import {ApolloLink} from 'apollo-link'
 
 
@@ -52,25 +57,58 @@ import config from '@/defaultSettings'
 const httpLink = new HttpLink({
   // 你需要在这里使用绝对路径
   // uri: 'http://192.168.2.32:4466/'
-  uri:'http://115.159.158.108:4466/'
+  // uri:'http://115.159.158.108:4466/'
+  uri:'http://182.254.214.210:4080/v1alpha1/graphql'
+})
+
+
+// 创建订阅的 websocket 连接
+const wsLink = new WebSocketLink({
+  uri: 'ws://182.254.214.210:4080/v1alpha1/graphql',
+  options: {
+    reconnect: true,
+    connectionParams: {
+      headers: {
+        'x-hasura-access-key': 'wicaretest1234'
+        // Authorization: `Bearer ${token}` || null
+      }
+    }
+  },
 })
 
 const middlewareLink = new ApolloLink((operation, forward) => {
   const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIiLCJpYXQiOjE1NDc3ODg3NzZ9.N__rYip33R9Y749bi3e0v4MR4_ntK9jXxp47nRqWMmY'
   operation.setContext({
     headers: {
-      Authorization: `Bearer ${token}` || null
+      // Authorization: `Bearer ${token}` || null,
+      "x-hasura-access-key": "wicaretest1234"
     }
   })
   return forward(operation)
 })
+
+
+
+// 使用分割连接的功能
+// 你可以根据发送的操作类型将数据发送到不同的连接
+const link = split(
+  // 根据操作类型分割
+  ({ query }) => {
+    const { kind, operation } = getMainDefinition(query)
+    return kind === 'OperationDefinition' &&
+      operation === 'subscription'
+  },
+  wsLink,
+  middlewareLink.concat(httpLink)
+)
 
 // 缓存实现
 const cache = new InMemoryCache()
 
 // 创建 apollo 客户端
 const apolloClient = new ApolloClient({
-  link: middlewareLink.concat(httpLink),
+  // link: middlewareLink.concat(httpLink),
+  link,
   cache
 })
 
@@ -78,9 +116,10 @@ const apolloProvider = new VueApollo({
   defaultClient: apolloClient
 })
 
+// exports.apolloProvider = apolloProvider
 
-
-
+// debugger
+// console.log(apolloProvider,'providerapploooooooo')
 
 
 
@@ -108,6 +147,8 @@ new Vue({
     store.commit('TOGGLE_WEAK', Vue.ls.get(DEFAULT_COLOR_WEAK, config.colorWeak))
     store.commit('TOGGLE_COLOR', Vue.ls.get(DEFAULT_COLOR, config.primaryColor))
     store.commit('SET_TOKEN', Vue.ls.get(ACCESS_TOKEN))
+    store.commit('SET_REMEMBER', Vue.ls.get('REMEMBER'))
+    store.commit('SET_ACCOUNT_PASSWORD', JSON.parse(Vue.ls.get('ACCOUNT_PASSWORD')||"{}"))
 
     console.log('.... created ()')
 

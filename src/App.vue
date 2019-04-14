@@ -1,7 +1,7 @@
 <template>
   <a-locale-provider :locale="locale">
     <div id="app">
-      <router-view/>
+      <router-view v-if="isRouterAlive"/>
     </div>
   </a-locale-provider>
 </template>
@@ -19,7 +19,23 @@ export default {
   data() {
     return {
       locale: zhCN,
-      version
+      version,
+      isRouterAlive: true
+
+    }
+  },
+  //用于刷新整个页面
+  provide(){
+    return {
+      reload:this.reload
+    }
+  },
+  methods: {
+    reload(){
+      this.isRouterAlive = false;
+      this.$nextTick(function(){
+        this.isRouterAlive = true
+      })
     }
   },
   mounted() {
@@ -53,6 +69,6 @@ export default {
 }
 .page-header-index-wide {
   overflow: auto;
-  background: #fff;
+  /* background: #fff; */
 }
 </style>

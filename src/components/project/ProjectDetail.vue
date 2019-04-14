@@ -1,43 +1,63 @@
 <template>
-  <div>
-    <a-card :loading="loading" :bordered="false" :body-style="{padding: '0 10px 40px',minWidth:'1200px'}">
+  <div :style="{maxWidth:'unset',margin:'0 auto'}">
+    <a-card
+      :loading="loading"
+      :bordered="false"
+      :body-style="{padding: '0 10px 40px',minWidth:'1150px'}"
+    >
       <a-tabs
         default-active-key="1"
         size="large"
         :tab-bar-style="{marginBottom: '12px', paddingLeft: '0'}"
       >
-        <a-tab-pane loading="true" :tab="title" key="1" style="overflow:auto">
-          <ProjectInfo :dataSource="iniDataSource" v-if="moduleType < 4"/>
+        <a-tab-pane loading="true" :tab="title" key="1" >
+          <ProjectInfo :type="type" v-if="type < 4"  />
           <div class="contractType" v-else>
-            <a-tabs type="card" defaultActiveKey="7">
-              <a-tab-pane tab="项目进度" key="1">
-                <ProjectProgress :dataSource="iniDataSource"/>
-                <!-- <p>Content of Tab Pane 1</p>
-                <p>Content of Tab Pane 1</p>
-                <p>Content of Tab Pane 1</p>-->
-              </a-tab-pane>
+            <a-tabs
+              type="card"
+              :defaultActiveKey="tapType"
+              @change="tabChange"
+              @tabClick="tabClick"
+            >
+              <a-tab-pane tab="项目进度" key="1"></a-tab-pane>
               <a-tab-pane tab="项目信息" key="2">
-                <ProjectInfo :dataSource="iniDataSource"/>
+                <!-- <ProjectInfo :dataSource="iniDataSource"/> -->
               </a-tab-pane>
               <a-tab-pane tab="项目成员" key="3">
-                <ProjectMember/>
+                <!-- <ProjectMember/> -->
               </a-tab-pane>
               <a-tab-pane tab="项目资料" key="4">
-                <ProjectDoc/>
+                <!-- <ProjectDoc/> -->
               </a-tab-pane>
               <a-tab-pane tab="项目任务" key="5">
-                <ProjectTask />
+                <!-- <ProjectTask /> -->
               </a-tab-pane>
               <a-tab-pane tab="多级复核" key="6">
-                <ProjectReview/>
+                <!-- <ProjectReview/> -->
               </a-tab-pane>
               <a-tab-pane tab="项目造价" key="7">
-                <ProjectCost/>
+                <!-- <ProjectCost/> -->
               </a-tab-pane>
               <a-tab-pane tab="内部核算" key="8">
-                <ProjectFund/>
+                <!-- <ProjectFund/> -->
               </a-tab-pane>
             </a-tabs>
+
+            <ProjectProgress :projectId="proId" v-if="activeTab == 1"/>
+            
+            <ProjectInfo :projectId="proId" :type="type" v-else-if="activeTab == 2"/>
+
+            <ProjectMember :projectId="proId" v-else-if="activeTab == 3"/>
+
+            <ProjectDoc :projectId="proId" v-else-if="activeTab == 4"/>
+            
+            <ProjectTask :projectId="proId" v-else-if="activeTab == 5"/>
+
+            <ProjectReview :projectId="proId" v-else-if="activeTab == 6"/>
+
+            <ProjectCost :projectId="proId" v-else-if="activeTab == 7"/>
+
+            <ProjectFund :projectId="proId" v-else-if="activeTab == 8"/>
           </div>
         </a-tab-pane>
         <a slot="tabBarExtraContent" @click="backList">
@@ -62,15 +82,6 @@ import ProjectTask from '@/components/project/ProjectTask'
 import ProjectReview from '@/components/project/ProjectReview'
 import ProjectFund from '@/components/project/ProjectFund'
 
-
-const provinceData = ['Zhejiang', 'Jiangsu']
-const cityData = {
-  Zhejiang: ['Hangzhou', 'Ningbo', 'Wenzhou'],
-  Jiangsu: ['Nanjing', 'Suzhou', 'Zhenjiang']
-}
-
-// const booleanFalse = false
-
 export default {
   name: 'TableDetail',
   props: {
@@ -81,7 +92,16 @@ export default {
     moduleType: {
       type: Number,
       default: 2
+    },
+    tapType: {
+      type: String,
+      default: '1'
+    },
+    projectId: {
+      type:String,
+      default:''
     }
+
   },
   components: {
     employeeTree,
@@ -97,22 +117,10 @@ export default {
   },
   data() {
     return {
-      loading: false,
-      type: this.moduleType,
-      provinceData,
-      cityData,
-      areas: cityData[provinceData[0]],
-      cities: cityData[provinceData[0]],
-      secondCity: cityData[provinceData[0]][0],
-      booleanFalse: true,
-      iniDataSource: { d: 3, df: 3 },
-      visible: false,
-      data: parameter => {
-        return getServiceList(Object.assign(parameter, this.queryParam)).then(res => {
-          console.log(res, 'res')
-          return res.result
-        })
-      }
+      loading: false,   //加载状态
+      type: String(this.moduleType),  //默认类型
+      activeTab: this.tapType, //标签页key
+      proId:this.projectId, //项目ID
     }
   },
   created() {
@@ -121,9 +129,17 @@ export default {
   methods: {
     //接口获取数据
     loadData() {},
-    backList() {
-      console.log(1)
+    backList() { //返回项目列表
+      // console.log(1)
       this.$emit('changeCom', { type: 1 })
+    },
+    //标签页切换
+    tabChange(activeKey) {
+      this.activeTab = activeKey
+      // console.log(activeKey,'tabchange')
+    },
+    tabClick(activeKey) {
+      // console.log(activeKey,'tabclick')
     }
   },
   watch: {}

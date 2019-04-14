@@ -1,25 +1,25 @@
 <template>
   <div class="main">
-    <a-form
-      class="user-layout-login"
-      ref="formLogin"
-      :autoFormCreate="(form)=>{this.form = form}"
-      id="formLogin"
-    >
-      <a-form-item
-        fieldDecoratorId="username"
-        :fieldDecoratorOptions="{rules: [{ required: true, message: '请输入帐户名或邮箱地址' }, { validator: this.handleUsernameOrEmail }], validateTrigger: 'change'}"
-      >
-        <a-input size="large" type="text" placeholder="帐户名或邮箱地址 / admin">
+    <a-form class="user-layout-login" ref="formLogin" :form="form" id="formLogin">
+      <a-form-item hasFeedback>
+        <a-input
+          size="large"
+          type="text"
+          v-decorator="['username',{rules: [{ required: true, message: '请输入帐户名或邮箱地址' }]}]"
+          placeholder="帐户名或邮箱地址"
+        >
           <a-icon slot="prefix" type="user" :style="{ color: 'rgba(0,0,0,.25)' }"/>
         </a-input>
       </a-form-item>
 
-      <a-form-item
-        fieldDecoratorId="password"
-        :fieldDecoratorOptions="{rules: [{ required: true, message: '请输入密码' }], validateTrigger: 'blur'}"
-      >
-        <a-input size="large" type="password" autocomplete="false" placeholder="密码 / admin">
+      <a-form-item hasFeedback>
+        <a-input
+          size="large"
+          type="password"
+          autocomplete="false"
+          placeholder="密码"
+          v-decorator="['password',{rules: [{ required: true, message: '请输入密码' }]}]"
+        >
           <a-icon slot="prefix" type="lock" :style="{ color: 'rgba(0,0,0,.25)' }"/>
         </a-input>
       </a-form-item>
@@ -79,9 +79,9 @@
             </a-col>
           </a-row>
         </a-tab-pane>
-      </a-tabs> -->
+      </a-tabs>-->
       <a-form-item>
-        <a-checkbox v-model="formLogin.rememberMe">自动登陆</a-checkbox>
+        <a-checkbox v-model="formLogin.rememberMe" @change="onChange">记住密码</a-checkbox>
         <router-link
           :to="{ name: 'recover', params: { user: 'aaa'} }"
           class="forge-password"
@@ -129,8 +129,11 @@
 import md5 from 'md5'
 import api from '@/api'
 import TwoStepCaptcha from '@/components/tools/TwoStepCaptcha'
-import { mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
+import store from '@/store/'
 import { timeFix } from '@/utils/util'
+
+import gql from 'graphql-tag'
 
 export default {
   components: {
@@ -141,10 +144,10 @@ export default {
       customActiveKey: 'tab1',
       loginBtn: false,
       // login type: 0 email, 1 username, 2 telephone
-      loginType: 0,
+      loginType: 1,
       requiredTwoStepCaptcha: false,
       stepCaptchaVisible: false,
-      form: null,
+      form: this.$form.createForm(this),
       state: {
         time: 60,
         smsSendBtn: false
@@ -158,7 +161,23 @@ export default {
       }
     }
   },
+  computed: {
+    ...mapState({
+      isRemember: state => state.user.isRemember,
+      account_password: state => state.user.account_password
+    })
+  },
+  beforeCreate() {
+    this.form = this.$form.createForm(this)
+    console.log(this.form, 'this.form this.form this.form ')
+  },
   created() {
+    console.log(this.isRemember, this.account_password, 'accountcreated')
+    this.formLogin.rememberMe = this.isRemember
+    // console.log(this.form)
+    // this.autoFormCreate()
+    setTimeout(this.autoFormCreate, 1000)
+
     this.$http
       .get('/auth/2step-code')
       .then(res => {
@@ -172,6 +191,16 @@ export default {
   },
   methods: {
     ...mapActions(['Login', 'Logout']),
+    autoFormCreate() {
+      // this.form = form
+      if (this.formLogin.rememberMe) {
+        this.form.setFieldsValue({ username: this.account_password.username })
+        this.form.setFieldsValue({ password: this.account_password.password })
+      } else {
+        this.form.setFieldsValue({ username: '' })
+        this.form.setFieldsValue({ password: '' })
+      }
+    },
     // handler
     handleUsernameOrEmail(rule, value, callback) {
       const regex = /^([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+((\.[a-zA-Z0-9_-]{2,3}){1,2})$/
@@ -190,7 +219,7 @@ export default {
       // debugger
       const that = this
       let flag = false
-
+      // let _this = this
       let loginParams = {
         remember_me: that.formLogin.rememberMe
       }
@@ -201,7 +230,11 @@ export default {
           if (!err) {
             flag = true
             loginParams[!that.loginType ? 'email' : 'username'] = values.username
+            console.log(values)
             loginParams.password = md5(values.password)
+            // console.log(store)
+            store.commit('SET_REMEMBER', that.formLogin.rememberMe)
+            store.commit('SET_ACCOUNT_PASSWORD', { username: values.username, password: values.password })
           }
         })
         // 使用手机号登陆
@@ -218,13 +251,19 @@ export default {
 
       that.loginBtn = true
 
+      loginParams.$apollo = this.$apollo
       that
         .Login(loginParams)
-        .then(() => {
+        .then(res => {
           // if (that.requiredTwoStepCaptcha) {
-            that.stepCaptchaVisible = true
+          if (res) {
+            that.requestFailed({ response: { data: { message: '密码或账号错误' } } })
+            return
+          }
+
+          that.stepCaptchaVisible = true
           // } else {
-            that.loginSuccess()
+          that.loginSuccess()
           // }
         })
         .catch(err => {
@@ -292,12 +331,18 @@ export default {
         duration: 4
       })
       this.loginBtn = false
+    },
+    onChange(e) {
+      console.log(this.isRemember, this.account_password, 'account')
+      console.log(`checked = ${e.target.checked}`)
+      console.log(this.form.getFieldValue('password'))
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
+
 .user-layout-login {
   label {
     font-size: 14px;

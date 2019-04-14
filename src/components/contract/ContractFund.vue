@@ -4,30 +4,29 @@
       <a-tab-pane key="1">
         <template slot="tab">
           <div style="line-height:22px">合同总金额</div>
-          <div class="fundS">123232.2
+          <div class="fundS">{{totalMoney}}
             <span>元</span>
           </div>
         </template>
-
-        <contract-fund-all/>
+        <contract-fund-all :data="data" :total="totalMoney"/>
       </a-tab-pane>
       <a-tab-pane key="2">
         <template slot="tab">
           <div style="line-height:22px">已开票金额</div>
-          <div class="fundS">123232.2
+          <div class="fundS">{{totalInvoice}}
             <span>元</span>
           </div>
         </template>
-        <contract-fund-invoiced/>
+        <contract-fund-invoiced :data="data" :total="totalInvoice"/>
       </a-tab-pane>
       <a-tab-pane key="3">
         <template slot="tab">
           <div style="line-height:22px">已回款金额</div>
-          <div class="fundS">123232.2
+          <div class="fundS">{{totalReceipt}}
             <span>元</span>
           </div>
         </template>
-        <contract-fund-back/>
+        <contract-fund-back :data="data" :total="totalReceipt"/>
       </a-tab-pane>
 
       <!-- <template > -->
@@ -42,7 +41,14 @@ import ContractFundInvoiced from '@/components/contract/ContractFundInvoiced'
 
 export default {
   name: 'ContractFund',
-  props: {},
+  props: {
+    data: {
+      type: Array,
+      default: function (value) {
+        return { value }
+      }
+    }
+  },
   components: {
     ContractFundAll,
     ContractFundBack,
@@ -50,8 +56,22 @@ export default {
   },
   data() {
     return {
-      dfdf: 'dfdfdf/brfdfd'
+      totalMoney: 0,
+      totalInvoice: 0,
+      totalReceipt: 0
     }
+  },
+  created() {
+    //数据请求参数配置
+    const _this = this
+    this.data.forEach(ele => {
+      _this.totalMoney += ele.moneys_aggregate.aggregate.sum.total || 0
+      _this.totalInvoice += ele.invoices_aggregate.aggregate.sum.amount || 0
+      _this.totalReceipt += ele.receipts_aggregate.aggregate.sum.amount || 0
+    })
+  },
+  methods: {
+
   }
 }
 </script>

@@ -10,7 +10,7 @@
     </div>-->
     <div class="copyright">
       <a-icon type="copyright"/>2019
-      <span>广联达科技股份有限公司</span>
+      <span>广东恒正工程造价咨询有限公司</span>
     </div>
   </div>
 </template>

@@ -5,7 +5,7 @@
       :title="title"
       v-model="visibled"
       @ok="handleOk"
-      @cancel="handleOk"
+      @cancel="cancel"
       :maskClosable="maskClosable"
       :width="550"
     >
@@ -19,8 +19,11 @@
             <a-tree
               :treeData="treeData"
               showIcon
-              :defaultExpandedKeys="['0-0-0']"
+              :expandedKeys="defaultExpandedKeys"
+              :defaultExpandAll="true"
+              @expand="changeExpand"
               @select="onSelect"
+              
             >
               <a-icon slot="home" type="home" style="color:#5873c9;font-weight: bolder;"/>
               <a-icon slot="team" type="team" style="color:#5873c9;font-weight: bolder;"/>
@@ -103,28 +106,43 @@ export default {
     },
     type: {
       type: Number,
-      default: 1
+      default: 1 //1所有员工/2部门/
+    },
+    type2: {
+      type:Number,
+      default:0,//1专业负责人/2项目成员
+    },
+    filterData: {
+      type: Array,
+      default: function () {
+        return []
+      }
+    },
+    initSelected: {
+      type: Array,
+      default: function() {
+        return []
+      }
     }
   },
   data() {
     return {
       title: this.inititle,
       visibled: this.inivisible,
+      noMultiple:this.isOne,
+      defaultExpandedKeys:[],
       treeData:[],
-      selectedData: []
+      employeeType:this.type2,
+      filterDatas:this.filterData,
+      selectedData: this.initSelected,
+      
     }
   },
-  updated() {
-    console.log(this.visibled)
-    if (this.visibled) {
-      // this.getEmployeeData()
-    }
+  created() {
+    // this.selectedData = this.initSelected
   },
   methods: {
-    //父级调用
-    // showModal() {
-    //   this.visibled = true
-    // },
+
 
     getEmployeeData() {
       var that = this
@@ -132,7 +150,7 @@ export default {
         .query({
           query: gql`
             query {
-              departments(where: {}) {
+              Department(where: {}) {
                 id
                 name
                 company {
@@ -142,14 +160,16 @@ export default {
                 employees {
                   id
                   name
+                  major
                 }
-                parentNode {
+                parent {
                   id
                   name
                 }
               }
             }
-          `
+          `,
+          fetchPolicy: 'network-only'
           // // 初始变量
           // variables: {
           //   skip: 6,
@@ -158,18 +178,22 @@ export default {
           // }
         })
         .then(res => {
-          var _data = res.data.departments
+          var _data = res.data.Department
           var objArr = {}
+          that.defaultExpandedKeys = [_data[0].company.id]
           objArr = {
             title: _data[0].company.name,
             key: _data[0].company.id,
             type: 1,
             slots: { icon: 'home' },
-            children: that.toTree(res.data.departments)
+            children: that.toTree(res.data.Department)
           }
 
           that.treeData = []
           that.treeData.push(objArr)
+          // console.log(that.defaultExpandedKeys)
+          // setTimeout(function(){},1000)
+          
           console.log(objArr, '_data')
           // console.log(res)
         })
@@ -182,10 +206,11 @@ export default {
       // 删除 所有 children,以防止多次调用
       var that = this;
       // var _data = []
+      
       data.forEach(function(item) {
-        // var iobj = {};
         item.title = item.name
         item.key = item.id
+        that.defaultExpandedKeys.push(item.id)
         item.slots = { icon: 'team' }
         item.type = 2
         delete item.children
@@ -201,17 +226,20 @@ export default {
       var val = []
       data.forEach(function(item) {
         // 以当前遍历项，的pid,去map对象中找到索引的id
-        item.parentNode = item.parentNode || {}
-        var parent = map[item.parentNode.id]
+        item.parent = item.parent || {}
+        var parent = map[item.parent.id]
         // 好绕啊，如果找到索引，那么说明此项不在顶级当中,那么需要把此项添加到，他对应的父级中
         if (parent) {
           ;(parent.children || (parent.children = [])).push(item)
-          // debugger
           if (that.type == 1) {
             if (item.employees.length) {
-              // debugger
-              item.employees.forEach(ele => {
-                // debugger
+              var _employees = item.employees.filter(ele => that.filterDatas.indexOf(ele.id) == -1)
+              if(that.employeeType == 1){ //专业负责人
+                _employees = item.employees.filter(ele => ele.major && that.filterDatas.indexOf(ele.id) == -1)
+              }else if(that.employeeType == 2){ //项目成员
+                _employees = item.employees.filter(ele => !ele.major && that.filterDatas.indexOf(ele.id) == -1)
+              }
+              _employees.forEach(ele => {
                 var obj = {
                   title: ele.name,
                   key: ele.id,
@@ -231,18 +259,28 @@ export default {
           //如果没有在map中找到对应的索引ID,那么直接把 当前的item添加到 val结果集中，作为顶级
           //  item.children = item.employees || []
           val.push(item)
-          // debugger
           if (that.type == 1) {
             //显示员工
             if (item.employees.length) {
-              item.employees.forEach(ele => {
+              var _employees = item.employees.filter(ele => that.filterDatas.indexOf(ele.id) == -1)
+              if(that.employeeType == 1){ //专业负责人
+                _employees = item.employees.filter(ele => ele.major && that.filterDatas.indexOf(ele.id) == -1)
+              }else if(that.employeeType == 2){ //项目成员
+                _employees = item.employees.filter(ele => !ele.major && that.filterDatas.indexOf(ele.id) == -1)
+              }
+              _employees.forEach(ele => {
                 var obj = {
                   title: ele.name,
                   key: ele.id,
                   type: 3,
                   slots: { icon: ele.sex == 1 ? 'male' : 'female' }
                 }
-                val.push(obj)
+                // val.push(obj)
+                if (Object.prototype.toString.call(item.children).indexOf('Array') > -1) {
+                  item.children.push(obj)
+                } else {
+                  item.children = [obj]
+                }
               })
             }
           }
@@ -251,36 +289,53 @@ export default {
       return val
     },
     handleOk(e) {
-      console.log(e)
-      this.visibled = false
-      this.$emit('changeStatus', false)
+      this.$emit('changeStatus', {visibled:false,data:this.selectedData,isCancel:false})
+    },
+    cancel(e){
+      // console.log(chang)
+      this.$emit('changeStatus', {visibled:false,data:this.selectedData,isCancel:true})
     },
     onSelect(selectedKeys, info) {
+      // console.log(selectedKeys, info,'info')
+      if(!selectedKeys.length){ //第二次点击没有key值
+        return
+      }
       if(this.type == 1){ //员工
         if(info.node.dataRef.type != 3){
           return
         }
       }
-      if(this.type == 2){ //员工
+      if(this.type == 2){ //部门
         if(info.node.dataRef.type != 2){
           return
         }
       }
       var newSelect = { key: selectedKeys[0], title: info.node.dataRef.title }
-      if (this.isOne) {
+      if (this.noMultiple) {
         //单选
         this.selectedData.splice(0, 1, newSelect)
       } else {
         //多选
+        var filter = this.selectedData.filter(ele => ele.key == newSelect.key)
+        if(filter.length){
+          return
+        }
         this.selectedData.push(newSelect)
       }
 
-      console.log('selected', selectedKeys, info, this.selectedData)
+      // console.log('selected', selectedKeys, info, this.selectedData)
     },
+    //删除已选
     deleteSelectData(item,index) {
       this.selectedData.splice(index,1)
       console.log(item)
+    },
+    //节点收起和展开
+    changeExpand(expandedKeys, {expanded: bool, node}){
+      this.defaultExpandedKeys = expandedKeys
+      // console.log(expandedKeys)
     }
+
   },
   watch: {
     inivisible(newT) {
@@ -288,12 +343,28 @@ export default {
 
       if (newT) {
         this.getEmployeeData()
+        // this.selectedData = this.initSelected
       }
       this.visibled = newT
+      // this.selectedData = []
     },
     inititle(newT) {
       // console.log(newT)
       this.title = newT
+    },
+    isOne(newT){
+      console.log(newT,'project review employee isone')
+      this.noMultiple = newT
+    },
+    type2(newT){
+      this.employeeType = newT
+    },
+    filterData(newT){
+      this.filterDatas = newT
+    },
+    initSelected(newT){
+      console.log(newT,'initSelected')
+      this.selectedData = newT
     }
   }
 }

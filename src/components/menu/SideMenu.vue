@@ -12,6 +12,7 @@
       :theme="theme"
       :mode="mode"
       @select="onSelect"
+      @click="onClick"
       style="padding: 16px 0px;"></s-menu>
   </a-layout-sider>
 
@@ -55,7 +56,11 @@
     },
     methods: {
       onSelect (obj) {
+        console.log('select2')
         this.$emit('menuSelect', obj)
+      },
+      onClick(obj){
+        console.log('click2')
       }
     }
   }

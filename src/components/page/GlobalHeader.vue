@@ -32,7 +32,7 @@
         <user-menu class="header-index-right"></user-menu>
       </div>
       <div class="header-index-wide">
-        <s-menu v-if="device !== 'mobile'" mode="horizontal" :menu="menus" :theme="theme"></s-menu>
+        <s-menu v-if="device !== 'mobile'" mode="horizontal" :menu="menus" :theme="theme" @click="onClick" @select="onSelect"></s-menu>
       </div>
     </div>
 
@@ -54,6 +54,7 @@
       Logo
     },
     mixins: [mixin],
+    inject:['reload'],
     props: {
       mode: {
         type: String,
@@ -105,6 +106,15 @@
       },
       toggle() {
         this.$emit('toggle')
+      },
+      //点击菜单
+      onClick(obj) {
+        // console.log(obj.key)
+        this.reload() //刷新页面
+      },
+      //选择菜单
+      onSelect(){
+        // console.log('click223')
       }
     }
   }

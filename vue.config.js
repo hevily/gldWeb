@@ -60,19 +60,27 @@ module.exports = {
 
   devServer: {
     proxy: {
-      '/api': {
-        // target: 'https://mock.ihx.me/mock/5baf3052f7da7e07e04a5116/antd-pro',
-        target: 'https://mock.ihx.me/mock/5baf3052f7da7e07e04a5116/antd-pro',
-        ws: false,
-        changeOrigin: true
-      },
-      '/gateway': {
-        target: 'https://www.easy-mock.com/mock/5b7bce071f130e5b7fe8cd7d/antd-pro',
-        ws: false,
-        changeOrigin: true,
+      // '/api': {
+      //   // target: 'https://mock.ihx.me/mock/5baf3052f7da7e07e04a5116/antd-pro',
+      //   target: 'https://mock.ihx.me/mock/5baf3052f7da7e07e04a5116/antd-pro',
+      //   ws: false,
+      //   changeOrigin: true
+      // },
+      // '/gateway': {
+      //   target: 'https://www.easy-mock.com/mock/5b7bce071f130e5b7fe8cd7d/antd-pro',
+      //   ws: false,
+      //   changeOrigin: true,
+      //   pathRewrite: {
+      //     '^/gateway': '/api'
+      //   }
+      // }
+      '/apis': {    //将www.exaple.com印射为/apis
+        target: 'http://localhost:15050',  // 接口域名
+        secure: false,  // 如果是https接口，需要配置这个参数
+        changeOrigin: true,  //是否跨域
         pathRewrite: {
-          '^/gateway': '/api'
-        }
+            '^/apis': ''   //需要rewrite的,
+        }              
       }
     }
   },

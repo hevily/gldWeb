@@ -1,7 +1,7 @@
 <template>
   <div class="page-header-index-wide">
     <div>
-      <a-card :loading="loading" :bordered="false" :body-style="{padding: '0',minWidth:'1200px'}">
+      <a-card :bordered="false" :body-style="{padding: '10px',minWidth:'1200px'}">
         <a-tabs
           default-active-key="1"
           size="large"
@@ -35,7 +35,7 @@
                   <a-tab-pane tab="我发起的任务" key="2"></a-tab-pane>
                   <a-tab-pane tab="已完成的任务" key="3"></a-tab-pane>
                 </a-tabs>
-                <TaskReceive :tapType="tapType"/>
+                <TaskReceive :tapType="tapType" :searchString="searchString" ref="TaskReceive"/>
               </div>
               <!-- </a-tab-pane> -->
             </a-row>
@@ -50,6 +50,9 @@
 <script>
 import TaskReceive from '@/components/task/TaskReceive'
 import TaskCreate from '@/components/dialog/task/TaskCreateDialog'
+import moment from 'moment'
+import 'moment/locale/zh-cn'
+moment.locale('zh-cn')
 // import ProjectDetail from '@/components/project/ProjectDetail'
 
 export default {
@@ -66,7 +69,8 @@ export default {
       moduleType: 1,
       title: '任务管理',
       tapType: 1,
-      createVisi: false
+      createVisi: false,
+      searchString:''
     }
   },
  
@@ -83,7 +87,18 @@ export default {
     createTask() {
       this.createVisi = true
     },
-    onSearch() {},
+    onSearch(e) {
+      console.log(e)
+      if(e){
+        this.searchString = `{_or:[{name:{_like:"%${e}%"}},{createdBy:{name:{_like:"%${e}%"}}},{handler:{name:{_like:"%${e}%"}}}]}`
+      }else {
+        this.searchString = ``
+      }
+      // this.$refs.TaskReceive
+      // console.log(this.$refs.TaskReceive.loadList())
+      
+
+    },
     tabChange(activeKey) {
       this.tapType = parseInt(activeKey)
       // console.log(activeKey)
@@ -125,5 +140,10 @@ export default {
 .taskType .ant-tabs-card .ant-tabs-bar .ant-tabs-tab-active {
   /* border-color: #fff; */
   background: #fff;
+}
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

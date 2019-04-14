@@ -14,6 +14,8 @@ import { axios } from '@/utils/request'
  */
 export function login(parameter) {
   console.log(parameter,'parameter')
+  // console.log(this.$apollo)
+  // debugger
   return axios({
     url: '/auth/login',
     method: 'post',
@@ -30,6 +32,7 @@ export function getSmsCaptcha(parameter) {
 }
 
 export function getInfo() {
+  // debugger
   return axios({
     url: '/user/info',
     method: 'get',

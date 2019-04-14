@@ -81,7 +81,7 @@ export default {
       return h(SubMenu, { key: menu.path ? menu.path : 'submenu_' + pIndex + '_' + index }, subItem.concat(itemArr))
     },
     renderItem: function(h, menu, pIndex, index) {
-      console.log(menu)
+      // console.log(menu)
       if (!menu.hidden) {
         
         return menu.children && !menu.alwaysShow
@@ -140,8 +140,13 @@ export default {
         on: {
           openChange: this.onOpenChange,
           select: obj => {
+            // console.log(obj,'select')
             this.selectedKeys = obj.selectedKeys
             this.$emit('select', obj)
+          },
+          click: obj => {
+            this.$emit('click', obj)
+            // console.log(this.$emit,'click')
           }
         }
       },

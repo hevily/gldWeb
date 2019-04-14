@@ -15,10 +15,15 @@ export default new Vuex.Store({
     permission
   },
   state: {
-
+    projectId:'',
+    projectName:'',
   },
   mutations: {
-
+    set_project(state,project){
+      console.log(project)
+      state.projectId = project.id
+      state.projectName = project.name
+    }
   },
   actions: {
 

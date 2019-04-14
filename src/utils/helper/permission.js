@@ -1,3 +1,5 @@
+import permission from '../../store/modules/permission'
+
 const PERMISSION_ENUM = {
   'add': { key: 'add', label: '新增' },
   'delete': { key: 'delete', label: '删除' },
@@ -21,14 +23,17 @@ function plugin(Vue) {
       get() {
         const _this = this
         return (permissions) => {
-          const [permission, action] = permissions.split('.')
-          const permissionList = _this.$store.getters.roles.permissions
-          permissionList.find((val) => {
-            return val.permissionId === permission
-          }).actionList.findIndex((val) => {
-            return val === action
+          // const [permission, action] = permissions.split('.')
+          const permission = _this.$store.getters.roles
+          const _permission = []
+          permission.forEach(ele => {
+            ele.role.authorizations.forEach(per => {
+              if(_permission.indexOf(per.authorization.key) === -1){
+                _permission.push(per.authorization.key)
+              }
+            })
           })
-          return false
+          return _permission.indexOf(permissions) > -1
         }
       }
     }
