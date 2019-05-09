@@ -48,8 +48,10 @@ module.exports = {
           /* less 变量覆盖，用于自定义 ant design 主题 */
 
           
-          'primary-color': '#5873c9',
-          'link-color': '#5873c9',
+          // 'primary-color': '#78bb60',
+          // 'link-color': '#78bb60',
+          'primary-color': '#78bb60',
+          'link-color': '#78bb60',
           'border-radius-base': '4px',
           
         },
@@ -74,12 +76,13 @@ module.exports = {
       //     '^/gateway': '/api'
       //   }
       // }
-      '/apis': {    //将www.exaple.com印射为/apis
-        target: 'http://localhost:15050',  // 接口域名
+      '/api': {    //将www.exaple.com印射为/apis
+        // target: 'http://localhost:15050',  // 接口域名
+        target: 'http://120.77.208.244:15050/',  // 接口域名
         secure: false,  // 如果是https接口，需要配置这个参数
         changeOrigin: true,  //是否跨域
         pathRewrite: {
-            '^/apis': ''   //需要rewrite的,
+            '^/api': ''   //需要rewrite的,
         }              
       }
     }

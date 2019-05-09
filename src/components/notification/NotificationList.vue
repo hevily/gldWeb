@@ -49,7 +49,7 @@
                 <a
                   href="javascript:;"
                   class="ellipsis"
-                  :style="record.recipients[0].status === 0 ? {width:'850px', display:'block', color: '#5873c9'}: {width:'850px', display:'block', color: '#a2a2a2'}"
+                  :style="record.recipients[0].status === 0 ? {width:'850px', display:'block', color: '#78bb60'}: {width:'850px', display:'block', color: '#a2a2a2'}"
                   :title="record.name"
                   @click="notiReaded(record)"
                 >{{ record.name }}</a>
@@ -102,7 +102,7 @@
                   <!--</a-row>-->
                 </a-checkbox-group>
               </div>
-              <a-icon slot="filterIcon" theme="filled" slot-scope="filtered" type="filter" :style="{ color: filtered ? '#5873c9' : undefined }" />
+              <a-icon slot="filterIcon" theme="filled" slot-scope="filtered" type="filter" :style="{ color: filtered ? '#78bb60' : undefined }" />
             </a-table>
           </a-row>
         </a-tab-pane>
@@ -110,17 +110,14 @@
     </a-card>
     <div>
       <a-modal
-        title="选择合同类型"
+        title="设置要推送的消息类型"
         style="top: 20px;"
         :width="250"
         :visible="modal1Visible"
-        @ok="() => createContract(true)"
-        @cancel="() => createContract(false)"
+        @ok="() => setFilterNotificationType(true)"
+        @cancel="() => setFilterNotificationType(false)"
       >
-        <a-radio-group v-model="value">
-          <a-radio :style="radioStyle" :value="2">普通合同</a-radio>
-          <a-radio :style="radioStyle" :value="3">框架合同</a-radio>
-        </a-radio-group>
+        <a-checkbox-group :options="options" v-model="typeArray" @change="(e) => { typeArray = e}" />
       </a-modal>
     </div>
   </div>
@@ -131,6 +128,7 @@ import gql from 'graphql-tag'
 import moment from 'moment'
 import { mapState, mapMutations } from 'vuex'
 import { ArrayToString } from '@/utils/util.js'
+import {db} from '@/utils/db'
 
 export default {
   name: 'TableList',
@@ -161,6 +159,7 @@ export default {
   },
   data() {
     return {
+      dbConn:null,
       filteredInfo: {},
       sortedInfo: {},
       sortedField: 'createdAt',
@@ -202,6 +201,7 @@ export default {
         { label: '消息通知', value: '6' }
       ],
       filterStatus: ['1', '2', '3', '4', '5', '6'],
+      typeArray: ['1', '2', '3', '4', '5', '6'],
       indeterminate: false,
       checkAll: true,
       columns: [
@@ -299,7 +299,14 @@ export default {
   },
   created() {
     //数据请求参数配置
-    console.log('createList')
+    console.log('createList',this.userInfo)
+    this.userInfo.filterNotificationType = this.userInfo.filterNotificationType || null
+    if(this.userInfo.filterNotificationType == null){
+      this.typeArray = ['1', '2', '3', '4', '5', '6']
+    }else {
+      this.typeArray = this.userInfo.filterNotificationType
+    }
+    this.dbConn = new db(this.$apollo)
     this.loading = true
     this.loadList()
   },
@@ -309,6 +316,7 @@ export default {
     })
   },
   methods: {
+    ...mapMutations(['SET_INFO']),
     handleChange (pagination, filters, sorter) {
       console.log('Various parameters', pagination, filters, sorter)
       this.defaultCurrent = pagination.current
@@ -616,6 +624,29 @@ export default {
     },
     showModal() {
       this.modal1Visible = true
+    },
+    //设置微信推送类型
+    async setFilterNotificationType(boolean){
+      // debugger
+      if(boolean){
+        var mutationString = `mutation {
+          update_Employee(where:{id:{_eq:"${this.userInfo.id}"}},
+          _set:{filterNotificationType:${ArrayToString(this.typeArray)}}){returning{id,filterNotificationType}}
+        }`
+        // Vue.ls.set('info',JSON.stringify(result))
+        console.log(mutationString)
+        let res = await this.dbConn.mutation(mutationString)
+        this.userInfo.filterNotificationType = this.typeArray
+        
+        this.$ls.set('info',JSON.stringify(this.userInfo))
+        this.SET_INFO(this.userInfo)
+        
+        // this.SET_INFO(record)
+        console.log(mutationString,this.typeArray,JSON.parse(this.$ls.get('info')),this.userInfo)
+       
+                
+      }
+      this.modal1Visible = false
     }
   },
   watch: {
@@ -660,11 +691,11 @@ export default {
   font-size: 12px;
 }
 .font-blue{
-  color: #5873c9;
+  color: #78bb60;
   font-size: 13px;
 }
 .icon-blue {
-  color: #5873c9;
+  color: #78bb60;
   font-size: 14px!important;
 }
 .ant-btn {

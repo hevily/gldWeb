@@ -466,7 +466,7 @@ var BusinessType = [
     '编制竣工结算',
     '编制竣工决算'
   ],
-  ['审核投资估算', '审核设计概算', '审核施工图预算', '审核清单控制价', '审核工程变更', '审核竣工结算'],
+  ['审核投资估算', '审核设计概算', '审核施工图预算', '审核清单控制价', '审核工程变更', '审核竣工结算','审核进度款','项目复审复核'],
   ['可行性经济评价', '全过程工程造价管理', '工程造价鉴定', '工程造价信息咨询服务', '其他工程造价咨询工作']
 ]
 
@@ -1252,7 +1252,7 @@ export default {
       .then(res => {
         if(_this.projectId){
           _this.$message.success('修改项目信息成功')
-          _this.reload()
+          // _this.reload()
         }else {
           // debugger
           console.log(res,'create project info')

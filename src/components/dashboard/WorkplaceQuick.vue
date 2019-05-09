@@ -1,5 +1,6 @@
 <template>
-  
+<div style="height:100%">
+  <a-dropdown :trigger="['contextmenu']">
     <div id="QuickList">
       <a-row class="file-list">
         <a-col
@@ -10,47 +11,60 @@
           @mouseover="showQuick(item)"
           @mouseout="hideQuick"
         >
-          <a-dropdown :trigger="['contextmenu']" >
-              <div class="item">
-                <!-- <span class="checkbox checked"></span> -->
-                <a-checkbox class="checkbox" :checked="item.checked" @change="onChange(item,$event)"></a-checkbox>
-                <div class="file-img" @click="openDoc(item)">
-                  <a :style="{color:item.document.iconColor}">
-                    <a-icon
-                      :type="item.document.iconType"
-                      :theme="item.document.iconType == 'file-jpg'?'outlined':'filled'"
-                      style="font-size: 38px;"
-                    />
-                  </a>
-                </div>
-                <div class="file-title-box">
-                  <span class="file-title" :title="item.document.name">{{item.document.name}}</span>
-                </div>
-              </div>
-            <a-menu slot="overlay" style="width:100px" @click="deleteFavorite">
-              <a-menu-item key="1">删除</a-menu-item>
-              
-            </a-menu>
-          </a-dropdown>
+          <div class="item">
+            <!-- <span class="checkbox checked"></span> -->
+            <a-checkbox class="checkbox" :checked="item.checked" @change="onChange(item,$event)"></a-checkbox>
+            <div class="file-img" @click="openDoc(item)">
+              <a
+                :style="{color:item.document.iconColor}"
+                v-if="item.document.iconType != 'file-jpg'"
+              >
+                <a-icon
+                  :type="item.document.iconType"
+                  :theme="item.document.iconType == 'file-jpg'?'outlined':'filled'"
+                  style="font-size: 38px;"
+                />
+              </a>
+              <a v-else>
+                <img
+                  style="width: 100%;height: 100%;"
+                  :src="`http://${location.hostname}:15050/upload/` + item.document.url + item.document.name"
+                >
+              </a>
+            </div>
+            <div class="file-title-box">
+              <span class="file-title" :title="item.document.name">{{item.document.name}}</span>
+            </div>
+          </div>
         </a-col>
       </a-row>
-
-      <!-- 右键菜单 -->
-      <!-- <div v-if="isRight" :style="{position:'fixed',top:client.Y,left:client.X}"> -->
-      <!-- <a-button type="danger" @click="deleteFavorite">删除</a-button> -->
-      <!-- <a-menu
-        style="width: 256px"
-        mode="vertical"
-        
-      >
-        <a-menu-item key="1">
-          <a-icon type="delete" />
-          删除
-        </a-menu-item>
-      </a-menu>-->
-      <!-- </div> -->
     </div>
-    
+    <a-menu slot="overlay" style="width:100px" @click="oparateFavorite">
+      <a-menu-item key="1">删除</a-menu-item>
+      <a-menu-item key="2">新建</a-menu-item>
+    </a-menu>
+  </a-dropdown>
+  <a-modal :visible="addShow" title="新建快捷方式" :footer="null" @cancel="cancel">
+    <a-row>
+      <a-col :span="24" style="margin-bottom:10px">
+        <a-row>
+          <a-col :span="4" style="text-align:right;line-height:30px">名称：</a-col>
+          <a-col :span="18"><a-input v-model="addName"/></a-col>
+        </a-row>
+      </a-col>
+      <a-col :span="24" style="margin-bottom:20px">
+        <a-row>
+          <a-col :span="4" style="text-align:right;line-height:30px">网址：</a-col>
+          <a-col :span="18"><a-input v-model="addUrl"/></a-col>
+        </a-row>
+      </a-col>
+      <a-col :span="24" style="text-align:center">
+        <a-button type="primary" style="margin-right:10px;" @click="handlerOk">确定</a-button>
+        <a-button type="default" @click="cancel">取消</a-button>
+      </a-col>
+    </a-row>
+  </a-modal>
+</div>
 </template>
 
 <script>
@@ -72,7 +86,11 @@ export default {
       favoriteDocument: [],
       selectId: '',
       client: {},
-      isRight: false
+      isRight: false,
+      location,
+      addShow:false,
+      addName:'',
+      addUrl:'',
     }
   },
   computed: {
@@ -98,6 +116,7 @@ export default {
                     id
                     name
                     url
+                    type
                 }
                 project_id
                 document_id
@@ -114,7 +133,8 @@ export default {
         if (e.document) {
           var ele = e.document
           var fileFormat = ele.name.split('.')
-          fileFormat = fileFormat[fileFormat.length - 1]
+          fileFormat = fileFormat[fileFormat.length - 1] || ''
+          fileFormat = fileFormat.toLocaleLowerCase()
           ele.downLoadHref = `http://${location.hostname}:15050/upload/` + ele.url + ele.name
 
           if (['doc', 'docx'].indexOf(fileFormat) > -1) {
@@ -152,7 +172,12 @@ export default {
       this.selectId = ''
     },
     openDoc(item) {
+      console.log(item.document,'item')
       let url = `http://${location.hostname}:15050/upload/` + item.document.url + item.document.name
+      if(item.document.type == 5){
+        url = item.document.url
+      }
+      
       window.open(url, '_blank')
     },
     onChange(item, e) {
@@ -173,31 +198,76 @@ export default {
     //   }
     //   console.log(event)
     // },
-    async deleteFavorite() {
+    async oparateFavorite(e) {
+      console.log(e)
       // e.stopPropagation() //阻止冒泡
-      let selectData = this.favoriteDocument.filter(ele => ele.checked)
-      if(!selectData.length){
-        return
+      if(e.key == 1){
+        let selectData = this.favoriteDocument.filter(ele => ele.checked)
+        if (!selectData.length) {
+          return
+        }
+        var deleteString = ''
+        selectData.forEach(ele => {
+          deleteString += `{id:{_eq:"${ele.id}"}},`
+        })
+        var mutation = `mutation {
+          delete_FavoriteDocument(where:{_or:[${deleteString}]}){returning{id}}
+        }`
+
+        let res = await this.dbConn.mutation(mutation)
+        this.isRight = false
+
+        this.getFavorite()
+        this.$emit('changeFile')
+      }else if(e.key == 2){
+        this.addShow = true
       }
-      var deleteString = ''
-      selectData.forEach(ele => {
-        deleteString += `{id:{_eq:"${ele.id}"}},`
-      })
-      var mutation = `mutation {
-        delete_FavoriteDocument(where:{_or:[${deleteString}]}){returning{id}}
-      }`
+      
+      // console.log(selectData, 'elete')
+    },
 
-      let res = await this.dbConn.mutation(mutation)
-      this.isRight = false
+    cancel(){
+      this.addShow = false
+    },
+    async handlerOk(){
 
-      this.getFavorite()
-      console.log(selectData, 'elete')
-    }
+      var mutationString = `mutation {
+          insert_Document(objects:[{
+            url:"${this.addUrl}",
+            name: "${this.addName}", 
+            property:1,#文件属性 0:目录 1:文件
+            type:5, #文件类型 0:合同文档 1:项目文档 2:公司文档 3:个人文档 4:任务文档 5:快捷方式
+            relatedId:"${this.projectId}",
+            projectFileType:4 #项目文件类型 0:项目资料 1:过程文件 2:成果文件 3:公共文档 4:个人文档
+            fileSize:0,
+            isLocked:false,
+            createdBy_id:"${this.userInfo.id}"
+          }]){returning{id}}
+        }`
+
+        let res = await this.dbConn.mutation(mutationString)
+
+        mutationString = `mutation {
+          insert_FavoriteDocument(objects:[{
+              project_id:"${this.projectId}",
+              document_id:"${res.data.insert_Document.returning[0].id}",
+              employee_id:"${this.userInfo.id}"
+          }]){returning{id}}
+        }`
+
+        let res2 = await this.dbConn.mutation(mutationString)
+        this.addShow = false
+        this.getFavorite()
+        this.$emit('changeFile')
+    },
   }
 }
 </script>
 
 <style>
+#QuickList {
+  height: 100%;
+}
 .file-list {
   padding: 4px 0 0 4px;
   overflow: auto;
@@ -284,5 +354,8 @@ export default {
 }
 .file-list .file-checked .checked {
   background-position: 0 -420px;
+}
+.ant-dropdown {
+  min-width: 100px !important
 }
 </style>

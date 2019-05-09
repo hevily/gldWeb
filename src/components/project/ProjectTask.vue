@@ -25,7 +25,7 @@
             slot-scope="text,record,index"
             :style="{display:'inline-block',width:'80%'}"
           >
-            <a-input :value="record.name" class="taskName" v-if="record.numParent || record.type == 3 || record.type == 4" readonly/>
+            <a-input :value="record.name" class="taskName" v-if="record.numParent ||  record.type == 4" readonly/>
             <a-input
               v-model="record.name"
               class="taskName"
@@ -828,12 +828,13 @@ export default {
                 performString = `{
                   employee_id:"${record.handler_id}"
                   project_id:"${_this.projectId}",
-                  ratios:[{name:"专业系数",value: ""},{name:"难度系数",value: ""},{name:"规模系数",value: ""},{name:"绩效分",value: ""}],
+                  ratios:[{name:"专业系数",value: ""},{name:"难度系数",value: ""},{name:"规模系数",value: ""},{name:"调整系数",value: ""},{name:"工期系数",value: ""}],
                 }`
                 notiString = `{
                   type:3,
                   name: "【${_this.userInfo.name}】将您添加为【${record.project.name}】的项目组成员",
                   status: 0,
+                  project_id:"${_this.projectId}",
                   recipients:{
                     data:{
                       recipient_id:"${record.handler_id}"
@@ -870,6 +871,8 @@ export default {
                       createdBy_id:"${_this.userInfo.id}",
                       type:2,
                       status:0,
+                      project_id:"${_this.projectId}",
+                      task_id:"${record.id}",
                       name:"【${_this.userInfo.name}】分配了【${record.project.name}】项目中的【${
               record.name
             }】任务给您，任务截止日期 ${record.project.endDate ? moment(record.project.endDate).add(-record.advanceDays,'days').format('YYYY-MM-DD') : ''}"
@@ -999,23 +1002,29 @@ export default {
     //创建特殊任务
     async createReview(type) {
       let data = this.data.filter(ele => ele.type == type)
-      console.log(data,this.Task1)
+
+      let isCompanyBoss = this.userInfo.roles.filter(e => (e.role||{}).name == '公司领导')
+      if(!isCompanyBoss.length && data.length) {
+        return
+      }
+      console.log(data,this.Task1,isCompanyBoss)
       
+
       
-      
+      // return
       if(type == 3){
         
         if(!this.Task1.length){
           this.$message.warning('项目还没设置稿件任务!')
           return
         }
-        name = "成果审核"
+        name = "【成果审核】"
 
         if(data.length){
           this.$message.warning('成果审核已存在')
         }
       }else {
-        name = "收费任务"
+        name = "【收费】"
         if(data.length){
           return
         }

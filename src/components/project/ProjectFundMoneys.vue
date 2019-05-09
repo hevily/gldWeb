@@ -52,7 +52,7 @@
               </td>
               <td width="60" class="font-center">=</td>
               <td width="220">
-                <a-input type="text" disabled="disabled" class="ui-input ui-w100"/>&nbsp;元
+                <a-input type="text" v-model="col.disCountValue" disabled="disabled" class="ui-input ui-w100"/>&nbsp;元
               </td>
             </tr>
           </tbody>

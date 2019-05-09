@@ -16,11 +16,11 @@
             :expandedKeys="expandedKeys"
             :autoExpandParent="autoExpandParent"
           >
-            <a-icon slot="home" type="home" style="color:#5873c9;font-weight: bolder;"/>
-            <a-icon slot="team" type="team" style="color:#5873c9;font-weight: bolder;"/>
+            <a-icon slot="home" type="home" style="color:#78bb60;font-weight: bolder;"/>
+            <a-icon slot="team" type="team" style="color:#78bb60;font-weight: bolder;"/>
             <div slot="title" slot-scope="{title, key}" style="position:relative;float:right;width:200px">
               {{title}}
-              <span style="position:absolute;right:10px;top:0px;color:#5873c9" v-if="key == id">
+              <span style="position:absolute;right:10px;top:0px;color:#78bb60" v-if="key == id">
                 <a-icon class="depart-button" type="plus" @click="createDepart()"/>
                 <a-icon class="depart-button" type="edit" @click="editDepart()"/>
                 <a-icon class="depart-button" type="delete" @click="deleteDepart(title)"/>
@@ -848,7 +848,7 @@
   }
 
   .depart-button {
-    color: #5873c9;
+    color: #78bb60;
     padding-right: 3px;
   }
 </style>

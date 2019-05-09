@@ -268,7 +268,7 @@
           padding-top: 15px;
           padding-left: 24px;
           height: 100%;
-          color: #5873c9;
+          color: #78bb60;
           font-size: 14px;
           font-weight: 700;
         }
@@ -296,7 +296,7 @@
   .setting-drawer-index-handle {
     position: absolute;
     top: 240px;
-    background: #5873c9;
+    background: #78bb60;
     width: 48px;
     height: 48px;
     right: 300px;

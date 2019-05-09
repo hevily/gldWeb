@@ -10,7 +10,7 @@
                 <a
                   v-if="index != breadCrumb.length - 1"
                   @click="jumpDoc(items,index)"
-                  :style="{color:'#5873c9'}"
+                  :style="{color:'#78bb60'}"
                 >{{items.name}}</a>
                 <span v-else>{{items.name}}</span>
               </a-breadcrumb-item>
@@ -125,7 +125,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState,mapMutations } from 'vuex'
 import { db } from '@/utils/db'
 import moment from 'moment'
 
@@ -210,6 +210,7 @@ export default {
     this.loadData()
   },
   methods: {
+    ...mapMutations(['set_file']),
     async loadData(record, index, orderName) {
       let queryString = `query {
             Document(where:{${this.whereString}},${orderName ? `order_by:[${orderName}]` : ''}){
@@ -422,6 +423,7 @@ export default {
     //上传文件
     async handleChange(info) {
       let _this = this
+      _this.set_file(info.fileList)
       if (info.file.status == 'uploading') {
         //上传中
         console.log(info.file.name, 'info')
@@ -639,7 +641,7 @@ export default {
 .company-doc .upload:hover,
 .company-doc .delete:hover {
   border: 1px solid #8197d6;
-  color: #5873c9;
+  color: #78bb60;
 }
 .company-doc .ant-table-thead > tr > th,
 .company-doc .ant-table-tbody > tr > td {

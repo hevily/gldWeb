@@ -3,7 +3,7 @@
     <router-link :to="{name:'home'}">
       <img src="~@/assets/logo.png" alt="logo">
       <!-- <router-link to="/home"> -->
-      <h1 v-if="showTitle">{{ title }}</h1>
+      <!-- <h1 v-if="showTitle">{{ title }}</h1> -->
       <!-- </router-link> -->
     </router-link>
   </div>
@@ -15,7 +15,7 @@
     props: {
       title: {
         type: String,
-        default: '咨询微平台',
+        default: '造价咨询管理平台',
         required: false
       },
       showTitle: {

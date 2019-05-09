@@ -104,7 +104,7 @@
               <a-icon type="appstore" style="margin: 0px -20px!important;"/>
               <span>书签栏</span>
             </div>
-            <a-menu-item  v-for="(col,index) in quickData" :key="col.id">{{col.name}}</a-menu-item>
+            <a-menu-item v-for="(col,index) in quickData" :key="col.id">{{col.name}}</a-menu-item>
             <!-- <a-menu-item key="4">汕头市档案馆建设项目数字档案馆信息化系统项目</a-menu-item> -->
           </a-sub-menu>
         </a-menu>
@@ -143,6 +143,7 @@
       </div>
       <!-- <setting-drawer></setting-drawer> -->
     </a-layout>
+    <uploadProgress/>
   </a-layout>
 </template>
 
@@ -155,26 +156,29 @@ import { triggerWindowResizeEvent } from '@/utils/util'
 import { mapState, mapActions } from 'vuex'
 import { mixin, mixinDevice } from '@/utils/mixin.js'
 
-import {db} from '@/utils/db'
+import uploadProgress from '@/components/same/uploadProgress'
+
+import { db } from '@/utils/db'
 
 export default {
   name: 'GlobalLayout',
   components: {
     SideMenu,
     GlobalHeader,
-    GlobalFooter
+    GlobalFooter,
+    uploadProgress
     // SettingDrawer
   },
   mixins: [mixin, mixinDevice],
   data() {
     return {
-      dbConn:new db(this.$apollo),
+      dbConn: new db(this.$apollo),
       collapsed: false,
       showWorkPlace: [],
       menus: [],
       iframeWin: {},
-      quickData:[],
-      src:"",
+      quickData: [],
+      src: ''
     }
   },
   computed: {
@@ -226,7 +230,7 @@ export default {
         this.src = `/workplace?projectId=${this.globalProjectId}&name=${this.projectName}`
         this.iframeWin.location.reload(true)
         // this.sendMessage()
-      }else {
+      } else {
         this.$message.warning('请点击项目列表的某个项目')
       }
 
@@ -299,12 +303,12 @@ export default {
       //   this.projectData = res.data.projectex.filter(ele => ele.isFavorite)
       // }
     },
-    handleClick(e){
+    handleClick(e) {
       console.log(e)
       let id = e.key
       let record = this.quickData.filter(e => e.id == id)[0]
-      if(record){
-        this.goProjectDetail(record,1)
+      if (record) {
+        this.goProjectDetail(record, 1)
       }
     },
     //页面跳转
@@ -314,7 +318,7 @@ export default {
         query: { projectId: record.id, name: record.name, type: type }
       })
       window.open(routeData.href, '_blank')
-    },
+    }
   },
   watch: {
     globalProjectId(newT) {
@@ -332,8 +336,7 @@ export default {
     sidebarOpened(val) {
       console.log('sidebarOpened', val)
       this.collapsed = !val
-    },
-    
+    }
   }
 }
 </script>
@@ -352,6 +355,11 @@ body {
 }
 .layout.ant-layout {
   overflow-x: hidden;
+  &.desktop {
+    .ant-layout {
+      background: #6f6847;
+    }
+  }
   &.mobile,
   &.tablet {
     .ant-layout-content {
@@ -472,11 +480,11 @@ body {
         }
         .avatar {
           // margin: 20px 8px 20px 0;
-          // color: #5873c9;
+          // color: #78bb60;
           // background: hsla(0, 0%, 100%, .85);
           // vertical-align: middle;
           margin: 10px 8px 10px 0;
-          color: #5873c9;
+          color: #78bb60;
           background: hsla(0, 0%, 100%, 0.85);
           vertical-align: middle;
           top: -2px;
@@ -564,16 +572,17 @@ body {
         flex: 1 1;
         display: flex;
         .logo.top-nav-header {
-          width: 165px;
-          height: 50px;
+          width: 385px;
+          height: 60px;
           position: relative;
-          line-height: 50px;
+          line-height: 60px;
           transition: all 0.3s;
           overflow: hidden;
           img {
             display: inline-block;
             vertical-align: middle;
-            height: 32px;
+            // height: 38px;
+            height: 45px;
           }
           h1 {
             color: #fff;
@@ -761,7 +770,7 @@ body {
   overflow-y: scroll;
   overflow-x: auto;
   iframe {
-    min-height: 576px
+    min-height: 576px;
   }
 }
 .fix-right-v3 {
@@ -829,4 +838,10 @@ li {
 .padding-fix {
   padding: 0px 12px !important;
 }
+.ant-layout-footer {
+  background: #6f6847 !important;
+}
+// .ant-btn{
+  
+// }
 </style>

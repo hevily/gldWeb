@@ -19,6 +19,7 @@
     "axios": "^0.18.0",
     "dayjs": "^1.7.5",
     "enquire.js": "^2.1.6",
+    "file-saver": "^2.0.1",
     "graphql": "^14.1.1",
     "graphql-tag": "^2.10.1",
     "js-cookie": "^2.2.0",
@@ -31,9 +32,12 @@
     "vue": "^2.5.17",
     "vue-apollo": "^3.0.0-beta.27",
     "vue-cropper": "^0.4.4",
+    "vue-json-excel": "^0.2.98",
     "vue-ls": "^3.2.0",
     "vue-router": "^3.0.1",
-    "vuex": "^3.0.1"
+    "vuex": "^3.0.1",
+    "xlsx": "^0.14.2",
+    "xlsx-style": "^0.8.13"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.2.0",
@@ -47,6 +51,7 @@
     "less-loader": "^4.1.0",
     "node-sass": "^4.9.0",
     "sass-loader": "^7.0.1",
+    "script-loader": "^0.7.2",
     "vue-template-compiler": "^2.5.17"
   },
   "eslintConfig": {

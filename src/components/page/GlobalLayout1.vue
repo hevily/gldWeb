@@ -222,7 +222,7 @@
         .header-index-wide {
           max-width: unset;
           // margin-left: 24px;
-          // background: #5873c9;
+          // background: #78bb60;
           // margin-left: 0;
           padding-left: 24px;
           // color: #ccc;
@@ -286,7 +286,7 @@
           .avatar {
             // margin: 20px 8px 20px 0;
             margin: 10px 8px 10px 0;
-            color: #5873c9;
+            color: #78bb60;
             background: hsla(0, 0%, 100%, .85);
             vertical-align: middle;
             top: -2px;

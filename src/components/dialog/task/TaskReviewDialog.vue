@@ -7,6 +7,7 @@
       @ok="handleOk"
       @cancel="handleCancel"
       :maskClosable="maskClosable"
+      
       :width="700"
     >
       <a-row class="task-review-dialog">
@@ -52,7 +53,18 @@
                   </a-select>
                 </td>
               </tr>
-
+              <tr v-if="type == 5">
+                <th class="th-top">暂停原因：</th>
+                <td colspan="3">
+                  <a-textarea
+                    v-model="remark"
+                    style="width:100%"
+                    rows="3"
+                    disabled
+                    placeholder=""
+                  ></a-textarea>
+                </td>
+              </tr>
               <tr>
                 <th class="th-top">审核意见：</th>
                 <td colspan="3">
@@ -64,7 +76,7 @@
                   ></a-textarea>
                 </td>
               </tr>
-              <tr v-if="taskType != 0 && taskType != 4">
+              <tr v-if="taskType != 0 && taskType != 4 && type != 5">
                 <th>关键指标：</th>
                 <td colspan="3">
                   <table width="100%" cellspacing="0" cellpadding="0">
@@ -144,7 +156,7 @@
                 </td>
               </tr>
               <!-- 审核阶段 -->
-              <tr v-if="auditData.length && taskType != 0 && taskType != 4">
+              <tr v-if="auditData.length && taskType != 0 && taskType != 4 && type != 5">
                 <th></th>
                 <td colspan="3">
                   <a-table
@@ -224,6 +236,18 @@
               </tr>
             </tbody>
           </table>
+        </a-col>
+        
+      </a-row>
+      <a-row slot="footer">
+        <a-col :span="24" >
+          <a-col :span="8" style="text-align:left">
+            <a-button type="primary" @click="goDetail" v-if="auditData.length && taskType != 0 && taskType != 4 && type != 5">项目造价</a-button>
+          </a-col>
+          <a-col :span="16" >
+            <a-button type="primary" @click="handleOk">确定</a-button>
+            <a-button type="default" @click="handleCancel">取消</a-button>
+          </a-col>
         </a-col>
       </a-row>
     </a-modal>
@@ -340,7 +364,7 @@ export default {
   },
   methods: {
     handleOk() {
-      if(this.taskType != 0 && this.taskType != 4 ){
+      if(this.taskType != 0 && this.taskType != 4 && this.type != 5){
         if((this.unitPrice||0) <= 0 && this.reviewResult == 1){
           this.$message.warning('请输入复核造价')
           return
@@ -356,6 +380,9 @@ export default {
     },
     async renewDocument(task) {
       let where = ``
+      if(!task.parent){
+        return
+      }
       // if (task.type == 3) {
       //   //多级复核
       //   where = `_and:[{relatedId:{_eq:"${task.project.id}"}},{projectFileType:{_eq:2}}]`
@@ -479,6 +506,9 @@ export default {
     },
     //获取审核阶段
     async auditPhase(task) {
+      if(this.type == 5){
+        return
+      }
       let where = ``
       if (task.type == 3) {
         //多级复核
@@ -562,6 +592,18 @@ export default {
       console.log(e)
       this.unitPrice = e
       this.beforeData(this.taskData)
+    },
+    //跳转到项目项目造价
+    goDetail() {
+      console.log(this.currentTask.project)
+
+      let routeData = this.$router.resolve({
+        name: "project",
+        query:{projectId:this.currentTask.project.id,name:this.currentTask.project.name,type:7}
+      });
+      // console.log(routeData.href)
+      window.open(routeData.href, '_blank');
+
     }
   },
   watch: {
@@ -573,6 +615,7 @@ export default {
         this.name = this.currentTask.name
         this.step = this.currentTask.step.toString()
         this.type = this.currentTask.type
+        this.remark = this.currentTask.remark
 
         this.taskType = (this.currentTask.parent||{}).type
 

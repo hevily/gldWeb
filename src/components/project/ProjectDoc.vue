@@ -6,6 +6,7 @@
           <a-tab-pane tab="送审资料" key="1"></a-tab-pane>
           <a-tab-pane tab="过程文件" key="2"></a-tab-pane>
           <a-tab-pane tab="成果文件" key="3"></a-tab-pane>
+          <a-tab-pane tab="打包文件" key="4"></a-tab-pane>
         </a-tabs>
         <!-- <a-radio-group @change="onChange" v-model="value">
           <a-radio-button value="a">项目资料</a-radio-button>
@@ -17,26 +18,48 @@
       <a-col :span="24">
         <a-row>
           <!-- 面包屑 -->
-          <a-col :span="12">
+          <a-col :span="10">
             <a-breadcrumb :style="{lineHeight:'32px'}">
               <a-breadcrumb-item v-for="(items,index) in breadCrumb" :key="index">
                 <a
                   v-if="index != breadCrumb.length - 1"
                   @click="jumpDoc(items,index)"
-                  :style="{color:'#5873c9'}"
+                  :style="{color:'#78bb60'}"
                 >{{items.name}}</a>
                 <span v-else>{{items.name}}</span>
               </a-breadcrumb-item>
             </a-breadcrumb>
           </a-col>
-          <a-col :span="12" style="text-align:right">
+          <a-col :span="14" style="text-align:right">
+            <a class="folderAdd" title="导入" @click="importDoc" v-if="activeKey !=4">
+              <a-icon type="import"></a-icon>
+            </a>
+            <a class="folderAdd" title="导出" @click="exportDoc" v-if="activeKey !=4">
+              <a-icon type="export"></a-icon>
+            </a>
+            <a class="folderAdd" title="移动" @click="moveDoc" v-if="activeKey !=4">
+              <a-icon type="profile"/>
+            </a>
+
+            <a class="folderAdd" title="打包压缩" @click="zipDoc" v-if="activeKey ==4">
+              <a-icon type="copy"></a-icon>
+            </a>
+
+            <a class="folderAdd" title="添加到打包列表" @click="addZip" v-if="activeKey !=4">
+              <a-icon type="plus"/>
+            </a>
+
             <!-- 添加目录 -->
-            <a class="folderAdd" @click="addFolder" v-if="$auth('upload-project-document')">
+            <a
+              class="folderAdd"
+              @click="addFolder"
+              v-if="$auth('upload-project-document') && activeKey !=4"
+            >
               <a-icon type="folder-add"/>
             </a>
             <!-- 上传资料 -->
             <a-upload
-              v-if="(activeKey != 1 || breadCrumb.length != 1) && $auth('upload-project-document')"
+              v-if="(activeKey != 1 || breadCrumb.length != 1) && $auth('upload-project-document') && activeKey !=4 "
               :style="{display:'inline-block',marginRight:'10px'}"
               :action="actionHref"
               :multiple="true"
@@ -152,6 +175,42 @@
         </div>
       </template>
     </a-modal>
+
+    <a-modal :visible="exportVisible" title="导出模板" @cancel="exportCancel" @ok="exportOk">
+      <a-row>
+        <a-col :span="5" style="text-align:right;line-height:30px">模板名称：</a-col>
+        <a-col :span="15">
+          <a-input v-model="exportName"/>
+        </a-col>
+      </a-row>
+    </a-modal>
+
+    <a-modal :visible="zipVisible" title="打包压缩" @cancel="zipCancel" @ok="zipOk">
+      <a-row>
+        <a-col :span="5" style="text-align:right;line-height:30px">压缩包名称：</a-col>
+        <a-col :span="15">
+          <a-input v-model="zipName"/>
+        </a-col>
+      </a-row>
+    </a-modal>
+
+    <importTemplate
+      :iVisible="iVisible"
+      :iTitle="iTitle"
+      :iType="iType"
+      @templateCancel="templateCancel"
+      @templateSave="templateSave"
+    />
+
+    <moveTemplate
+      :projectId="projectId"
+      :mVisible="mVisible"
+      :mTitle="mTitle"
+      :mType="mType"
+      :filterId="filterId"
+      @moveCancel="moveCancel"
+      @moveSave="moveSave"
+    />
   </div>
 </template>
 <script>
@@ -162,18 +221,19 @@ import moment from 'moment'
 import 'moment/locale/zh-cn'
 moment.locale('zh-cn')
 import { db } from '@/components/_util/db'
-// import { axios } from '@/utils/request'
-import axios from 'axios'
+
+import { ArrayToString } from '@/components/_util/StringUtil'
+import importTemplate from '@/components/same/importTemplate'
+import moveTemplate from '@/components/same/moveTemplate'
+
+import uuid from 'uuid'
+
+import { axios } from '@/utils/request'
 
 import { Icon } from 'ant-design-vue'
 const MyIcon = Icon.createFromIconfontCN({
   scriptUrl: '//at.alicdn.com/t/font_1018467_zbasjalz32.js' // 在 iconfont.cn 上生成
 })
-// ;('.doc、.docx')
-// ;('.xls .xlsx')
-// ;('.ppt')
-// ;('.pdf')
-// ;('')
 
 const firstColumns = [
   { title: '名称', dataIndex: 'name', key: 'name', scopedSlots: { customRender: 'name' } },
@@ -266,12 +326,29 @@ export default {
       addFolderTitle: '', //增加目录弹框标题,
       actionHref: '',
       url: '',
-      activeKey:1, //资料类型 1送审资料、2过程文件、3成果文件
-      whereString:'', //刷选条件
+      activeKey: 1, //资料类型 1送审资料、2过程文件、3成果文件
+      whereString: '', //刷选条件,
+      projectMan: [],
+      projectName: '',
+      exportVisible: false,
+      exportName: '',
+      exportData: [],
+      iVisible: false, //导入模板弹框
+      iTitle: '',
+      iType: 1,
+      mVisible: false, //移动弹框
+      mTitle: '移动目录',
+      mType: 0,
+      filterId: [],
+      importAll: [],
+      zipVisible: false, //压缩包弹框
+      zipName: ''
     }
   },
   components: {
-    MyIcon
+    MyIcon,
+    importTemplate,
+    moveTemplate
   },
   computed: {
     ...mapState({
@@ -283,15 +360,50 @@ export default {
     // console.log(this.ArrayToString)
     var _this = this
     this.docChange(1)
-    
+    this.loadMember()
   },
   methods: {
+    ...mapMutations(['set_file']),
+    async loadMember() {
+      var member = `query{
+          Project(where:{id:{_eq:"${this.projectId}"}}){
+            id
+            name
+            principal_id
+            principal {
+              id
+              name
+            }
+            members {
+              id
+              member_id
+            }
+            chargers {
+              charger_id
+              id
+            }
+          }
+      }`
+      let res = await this.dbConn.query(member)
+      let projectInfo = res.data.Project[0]
+      this.projectMan = [projectInfo.principal_id] //通知成员上传了资料
+      this.projectName = projectInfo.name
+      projectInfo.members.forEach(ele => {
+        this.projectMan.push(ele.member_id)
+      })
+      projectInfo.chargers.forEach(ele => {
+        this.projectMan.push(ele.charger_id)
+      })
+
+      // if(projectInfo.members.length){}
+    },
+
     //项目资料所有数据
     loadData(orderName) {
       var _this = this
       return this.$apollo.query({
         query: gql`query{
-           Document(where:{${this.whereString}},${orderName ? `order_by:[${orderName}]`:''}){
+           Document(where:{${this.whereString}},${orderName ? `order_by:[${orderName}]` : ''}){
             id
             name
             url
@@ -313,6 +425,7 @@ export default {
                 name
               }
             }
+            parent_id
             parent {
               id
               name
@@ -327,33 +440,35 @@ export default {
       var data = []
       this.isFirst = false
       this.breadCrumb = []
-      if(this.activeKey == 1){
+      if (this.activeKey == 1) {
         data = beforeData.filter(ele => ele.parent == null && ele.projectFileType == 0 && ele.property == 0)
         this.isFirst = true
         this.breadCrumb = [{ name: '送审资料' }]
-      }else if(this.activeKey == 2){
+      } else if (this.activeKey == 2) {
         data = beforeData.filter(ele => ele.parent == null && ele.projectFileType == 1)
         this.breadCrumb = [{ name: '过程文件' }]
-      }else {
+      } else if (this.activeKey == 3) {
         data = beforeData.filter(ele => ele.parent == null && ele.projectFileType == 2)
         this.breadCrumb = [{ name: '成果文件' }]
+      } else {
+        data = beforeData
+        this.breadCrumb = []
       }
       this.actionHref = `http://${location.hostname}:15050/upload?path=` + this.projectId
       this.url = this.projectId
 
-      console.log( this.actionHref,this.url)
+      console.log(this.actionHref, this.url)
       this.folderNameSelectData = []
       data.forEach(ele => {
         var childData = this.allData.filter(e => (e.parent ? ele.id == e.parent.id : ''))
         ele.objectNum = childData.length
-        if(ele.property == 0){
+        if (ele.property == 0) {
           this.folderNameSelectData.push(ele.name)
         }
-        
       })
-     
+
       this.firstData = data
-      if(this.activeKey != 1){
+      if (this.activeKey != 1) {
         this.beforeFolderData(data)
       }
       console.log(data, 'before data')
@@ -362,7 +477,7 @@ export default {
     //目录下级数据
     nextFolder(record, index, sort) {
       // console.log(record,"next folder")
-      debugger
+      // debugger
       var _this = this
       this.selectedRowKeys = []
       this.selectedRows = []
@@ -388,6 +503,7 @@ export default {
               id
               employee {name}
             }
+            parent_id
             parent {
               id
               name
@@ -471,20 +587,20 @@ export default {
         orderName = `{${orderName}:desc}`
         // orderName += '_DESC'
       }
-      if(this.breadCrumb.length == 1 && this.activeKey != 1){
+      if (this.breadCrumb.length == 1 && this.activeKey != 1) {
         this.loadData(orderName)
-        .then(res => {
-          console.log(res, 'get project document Data success')
-          _this.allData = res.data.Document
-          _this.beforeData(res.data.Document)
-        })
-        .catch(err => {
-          console.log(err, 'get project document Data error')
-        })
-      }else {
+          .then(res => {
+            console.log(res, 'get project document Data success')
+            _this.allData = res.data.Document
+            _this.beforeData(res.data.Document)
+          })
+          .catch(err => {
+            console.log(err, 'get project document Data error')
+          })
+      } else {
         this.nextFolder(this.breadCrumb[this.breadCrumb.length - 1], this.breadCrumb.length, orderName)
       }
-      
+
       console.log(orderName, 'table change orderby')
     },
 
@@ -518,6 +634,7 @@ export default {
       var _this = this
       this.selectedRows = []
       this.selectedRowKeys = []
+      // debugger
       if (item.id) {
         this.nextFolder(item, index)
       } else {
@@ -624,10 +741,26 @@ export default {
         this.$message.error('请选中文件')
         return
       }
+
       this.$confirm({
         title: '删除文档',
         content: `你确定删除已选择文档吗？`,
         onOk() {
+          if (_this.activeKey == 4) {
+            // var data = []
+            // _this.secondData.forEach((e,i) => {
+            //   if(_this.selectedRowKeys.indexOf(i) == -1){
+            //     data.push(e)
+            //   }
+            // })
+
+            // _this.secondData = data
+            // _this.$ls.set(this.projectId,JSON.stringify(data))
+            // _this.selectedRowKeys = []
+            _this.setFileList()
+            return
+          }
+
           var deleteString = '['
           _this.selectedRows.forEach(ele => {
             if (ele.property == 0) {
@@ -673,6 +806,7 @@ export default {
     //上传文件
     handleChange(info) {
       let _this = this
+      _this.set_file(info.fileList)
       if (info.file.status == 'uploading') {
         //上传中
         console.log(info.file.name, 'info')
@@ -682,16 +816,36 @@ export default {
         //上传完成
         // this.$message.success('上传完成')
         let content = ''
-        if(this.activeKey == 1){
+        if (this.activeKey == 1) {
           content = '上传了项目资料'
-        }else if(this.activeKey == 2){
+        } else if (this.activeKey == 2) {
           content = '上传了过程资料'
-        }else {
+        } else {
           content = '上传了成果文件'
         }
         console.log(info.file.name, 'done')
         let parentId = _this.breadCrumb[_this.breadCrumb.length - 1].id
         var url = this.breadCrumb[this.breadCrumb.length - 1].url || _this.projectId
+
+        let notificationString = ''
+        if (this.projectMan.length) {
+          var notification = `【${this.userInfo.name}】上传了【${info.file.name}】资料到【${this.projectName}】项目`
+          var obj = ''
+          this.projectMan.forEach(e => {
+            obj += ` {
+                type: 4
+                name: "${notification}"
+                status: 0,
+                project_id:"${this.projectId}",
+                recipients: {
+                  data: {recipient_id:"${e}"}
+                }
+              }
+            `
+          })
+          notificationString = `insert_Notification(objects: [${obj}]){returning {id}}`
+        }
+
         var mutationString = `mutation {
           insert_Document(objects:[{
               url:"${url}/",
@@ -701,7 +855,7 @@ export default {
               relatedId:"${this.projectId}",
               projectFileType:${this.activeKey - 1} #项目文件类型 0:项目资料 1:过程文件 2:成果文件
               fileSize:${info.file.size},
-              ${parentId ? `parent_id:"${parentId}",`:''}
+              ${parentId ? `parent_id:"${parentId}",` : ''}
               isLocked:false,
               createdBy_id:"${this.userInfo.id}"
             }]){returning{id}}
@@ -710,7 +864,10 @@ export default {
             ]){
               returning{id}
             }
+            ${notificationString}
         }`
+
+        console.log(mutationString)
 
         this.dbConn
           .mutation(mutationString)
@@ -735,10 +892,12 @@ export default {
         let link = document.createElement('a')
         link.style.display = 'none'
         link.href = record.downLoadHref
-        link.setAttribute('download', record.name)
 
-        document.body.appendChild(link)
-        link.click()
+        window.open(record.downLoadHref, '_blank')
+        // link.setAttribute('download', record.name)
+
+        // document.body.appendChild(link)
+        // link.click()
       }
     },
     //切换类型
@@ -746,23 +905,302 @@ export default {
       console.log(e, 'tabs change')
       let _this = this
       this.activeKey = e
-      if(e == 1){
+      this.mType = e - 1
+      this.selectedRowKeys = []
+      if (e == 1) {
         this.whereString = `_and:[{relatedId:{_eq:"${this.projectId}"}},{type:{_eq:1}},{projectFileType:{_eq:0}}]`
-      }else if(e == 2){
+      } else if (e == 2) {
         this.whereString = `_and:[{relatedId:{_eq:"${this.projectId}"}},{type:{_in:[1,4]}},{projectFileType:{_eq:1}}]`
-      }else {
+      } else {
         this.whereString = `_and:[{relatedId:{_eq:"${this.projectId}"}},{type:{_eq:1}},{projectFileType:{_eq:2}}]`
       }
-      this.loadData()
-        .then(res => {
-          console.log(res, 'get project document Data success')
-          _this.allData = res.data.Document
-          _this.beforeData(res.data.Document)
+      if (e != 4) {
+        this.loadData()
+          .then(res => {
+            console.log(res, 'get project document Data success')
+            _this.allData = res.data.Document
+            _this.beforeData(res.data.Document)
+          })
+          .catch(err => {
+            console.log(err, 'get project document Data error')
+          })
+      } else {
+        var document = JSON.parse(this.$ls.get(this.projectId) || JSON.stringify([]))
+        _this.beforeData(document)
+      }
+    },
+
+    exportDoc() {
+      console.log(this.allData.filter(ele => ele.property == 0))
+
+      let docData = this.allData.filter(ele => ele.property == 0)
+
+      //  let firstData = docData.filter(ele => !ele.parent)
+      docData.forEach(ele => {
+        let childData = docData.filter(e => ele.id == (e.parent || {}).id)
+        childData.length ? (ele.child = childData) : ''
+      })
+
+      let firstData = docData.filter(ele => !ele.parent)
+      this.exportData = firstData
+      this.exportVisible = true
+      //  console.log(ArrayToString(firstData))
+    },
+    exportCancel() {
+      this.exportVisible = false
+    },
+    async exportOk() {
+      let mutation = `mutation {
+        insert_Template(objects:[{
+          data:${ArrayToString(this.exportData)},
+          name:"${this.exportName}",
+          type:1
+        }]){
+          returning{id}
+        }
+      }`
+      console.log(mutation)
+      let res = await this.dbConn.mutation(mutation)
+      this.$message.success('导出成功')
+      this.exportVisible = false
+    },
+    importDoc() {
+      // console.log(this.allDate)
+      this.iTitle = '导入模板'
+      this.iVisible = true
+    },
+    templateCancel() {
+      this.iVisible = false
+    },
+    templateSave(data) {
+      let _this = this
+      this.$confirm({
+        title: '导入目录树',
+        content: `是否导入目录树?`,
+        async onOk() {
+          let ImportJSON = data
+          var newJSON = []
+          var url = _this.breadCrumb[_this.breadCrumb.length - 1].url || _this.projectId
+          var parent_id = _this.breadCrumb[_this.breadCrumb.length - 1].id || null
+          // console.log(ImportJSON,'ImportJSON')
+          let _data = _this.isFirst ? _this.firstData : _this.secondData.filter(e => e.property == 0)
+          let newData = []
+          _data.forEach(e => {
+            newData.push(e.name)
+          })
+          let importData = []
+          ImportJSON.forEach(ele => {
+            // debugger
+            if (newData.indexOf(ele.name) == -1) {
+              importData.push(ele)
+            }
+          })
+          _this.importAll = []
+          // console.log(importData,'importData')
+          _this.getDocTreeData(importData, url, parent_id)
+          console.log(_this.importAll, 'importAll')
+          if (_this.importAll.length) {
+            _this.importAllDocument(_this.importAll)
+            _this.$message.success('导入成功')
+            setTimeout(function() {
+              _this.jumpDoc(_this.breadCrumb[_this.breadCrumb.length - 1], _this.breadCrumb.length)
+            }, 100)
+          }
+          _this.iVisible = false
+        },
+        onCancel() {}
+      })
+    },
+
+    getDocTreeData(data, url, parentId) {
+      if ((data || []).length) {
+        data.forEach(ele => {
+          let id = uuid()
+          let _url = url + '/' + id
+          var obj = {
+            id: id,
+            url: _url,
+            name: ele.name,
+            property: 0,
+            type: 1,
+            relatedId: this.projectId,
+            projectFileType: this.activeKey - 1,
+            parent_id: parentId || null,
+            createdBy_id: this.userInfo.id
+          }
+          this.importAll.push(obj)
+          if (ele.child) {
+            this.getDocTreeData(ele.child, _url, id)
+          }
         })
-        .catch(err => {
-          console.log(err, 'get project document Data error')
-        })
+      }
+    },
+
+    async importAllDocument(data) {
+      let insertString = `mutation{insert_Document(objects:${ArrayToString(data)}){returning{id}}}`
+      let res = await this.dbConn.mutation(insertString)
+      console.log(res, insertString)
+    },
+
+    //移动目录弹框显示
+    moveDoc() {
+      // debugger
+      this.filterId = []
+      this.selectedRows.forEach(e => {
+        this.filterId.push(e.id)
+      })
+      this.mVisible = true
+    },
+    //取消移动
+    moveCancel() {
+      this.mVisible = false
+    },
+    //确定移动
+    async moveSave(obj) {
+      var update = []
+      this.selectedRows.forEach(e => {
+        if (e.property == 1) {
+          var _obj = {
+            id: e.id,
+            parent_id: obj.id,
+            url: obj.url + '/',
+            oldUrl: e.url,
+            oldParent_id: e.parent_id,
+            name: e.name,
+            property: e.property
+          }
+          update.push(_obj)
+        } else {
+          let child = this.allData.filter(ele => ele.url.indexOf(e.url) > -1)
+
+          child.forEach(ele => {
+            var _obj = {}
+            _obj = {
+              id: ele.id,
+              parent_id: obj.id,
+              url: ele.url.replace(e.url, obj.url + '/' + ele.id),
+              oldUrl: ele.url,
+              oldParent_id: ele.parent_id,
+              name: ele.name,
+              property: ele.property
+            }
+            if (ele.id == e.id) {
+              _obj.parent_id = obj.id
+            } else {
+              _obj.parent_id = ele.parent_id
+            }
+            update.push(_obj)
+          })
+          console.log(child)
+        }
+      })
+
+      for (const e of update) {
+        let mutationString = `mutation{update_Document(where:{id:{_eq:"${e.id}"}},_set:{parent_id:"${e.parent_id}",url:"${e.url}"}){returning{id}}}`
+        console.log(mutationString,e)
+        if(e.property == 1){
+          let res = await axios({
+            url: '/fs/rename',
+            method: 'post',
+            data: { oldPath: e.oldUrl, newPath: e.url,type:0 ,name:e.name}
+          })
+        }
+        let res2 =  await this.dbConn.mutation(mutationString)
+      }
+      this.mVisible = false
+      this.jumpDoc(this.breadCrumb[this.breadCrumb.length - 1], this.breadCrumb.length)
+      this.$message.success('移动成功')
+      console.log('done!')
+
+      // update.forEach(e => {
+
+        
+
+      //   console.log(res2,res)
+
+      // })
+
+      console.log(this.allData, obj, update)
+    },
+    //添加到打包列表
+    addZip() {
+      let res = this.$ls.get(this.projectId) || JSON.stringify([])
+      res = JSON.parse(res)
+      res = res.concat(this.selectedRows)
+      console.log(res, this.projectId)
+      this.$ls.set(this.projectId, JSON.stringify(res))
+      // res.forEach(e =>)
+    },
+
+    zipDoc() {
+      this.zipVisible = true
+    },
+
+    zipCancel() {
+      this.zipVisible = false
+    },
+
+    async zipOk() {
+      console.log(this.selectedRows)
+      if (!this.selectedRows.length) {
+        this.$message.warning('请选择文件！')
+        return
+      }
+      // let url = `http://${location.hostname}:15050/fs/zipFile`
+      let newUrl = `${this.projectId}/` + this.zipName + '.zip'
+      let fileList = []
+      this.selectedRows.forEach(e => {
+        var obj = { path: e.url + e.name, name: e.name }
+        fileList.push(obj)
+      })
+      let res = await axios({
+        url: '/fs/zipFile',
+        method: 'post',
+        data: { newZipPath: newUrl, fileList: JSON.stringify(fileList) }
+      })
+      console.log(res)
+      // this.deleteFolder()
+      var content = '压缩文件'
+      var mutationString = `mutation {
+          insert_Document(objects:[{
+              url:"${this.projectId}/",
+              name: "${this.zipName + '.zip'}", 
+              property:1,#文件属性 0:目录 1:文件
+              type:1, #文件类型 0:合同文档 1:项目文档 2:公司文档 3:个人文档
+              relatedId:"${this.projectId}",
+              projectFileType:2 #项目文件类型 0:项目资料 1:过程文件 2:成果文件
+              fileSize:${res.fileSize},
+              isLocked:false,
+              createdBy_id:"${this.userInfo.id}"
+            }]){returning{id}}
+            insert_Summary(objects:[
+              { content: "${content}", createdBy_id: "${this.userInfo.id}",project_id:"${this.projectId}"}
+            ]){
+              returning{id}
+            }
+        }`
+
+      let res2 = this.dbConn.mutation(mutationString)
+
+      this.setFileList()
+      this.zipVisible = false
+      this.$message.success('打包成功')
+      console.log(res)
+    },
+
+    setFileList() {
+      var data = []
+      this.secondData.forEach((e, i) => {
+        if (this.selectedRowKeys.indexOf(i) == -1) {
+          data.push(e)
+        }
+      })
+
+      this.secondData = data
+      this.$ls.set(this.projectId, JSON.stringify(data))
+      this.selectedRowKeys = []
     }
+
     // download (data,record) {
 
     // }
@@ -901,7 +1339,7 @@ export default {
 .projectDoc .upload:hover,
 .projectDoc .delete:hover {
   border: 1px solid #8197d6;
-  color: #5873c9;
+  color: #78bb60;
 }
 .projectModal .ant-modal-footer {
   border-top: 0;
@@ -941,8 +1379,8 @@ export default {
   position: relative;
   top: 4px;
 }
-.projectDoc  .ant-tabs-nav-wrap {
-  background: unset!important
+.projectDoc .ant-tabs-nav-wrap {
+  background: unset !important;
 }
 </style>
 

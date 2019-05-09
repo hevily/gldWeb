@@ -33,7 +33,7 @@
                         <img
                           :style="{width:'70px',height:'70px'}"
                           @click="openDoc(item)"
-                          :src="`http://${location.hostname}:15050/upload/` + item.body.url + '/'+ item.body.name"
+                          :src="item.body.src"
                         >
                       </div>
                       <div class="send-body" v-else>
@@ -59,13 +59,15 @@
                       class="send-body"
                       v-if="[0,3].indexOf(item.type) > -1"
                     >{{ getTypeDesc(item) }}</div>
+                    <!-- 图片 -->
                     <div class="send-body" v-else-if="item.type == 1">
                       <img
                         :style="{width:'70px',height:'70px'}"
                         @click="openDoc(item)"
-                        :src="`http://${location.hostname}:15050/upload/` + item.body.url + '/'+ item.body.name"
+                        :src="item.body.src"
                       >
                     </div>
+                    <!-- 文件 -->
                     <div class="send-body" v-else>
                       <a @click="openDoc(item)">{{item.body.name}}</a>
                     </div>
@@ -127,41 +129,76 @@
       </a-col>
       <a-col :span="6" class="setScroll" :style="{height:this.screen.height/2 + 'px'}">
         <div style="text-align: center;margin-top: 5px;">
-          <a-radio-group defaultValue="a" buttonStyle="solid" @change="filterDoc">
-            <a-radio-button value="1">
+          <a-radio-group
+            :defaultValue="1"
+            buttonStyle="solid"
+            :value="this.activityKey"
+            @change="filterDoc"
+          >
+            <a-radio-button :value="1">
               <a-icon type="file-jpg" title="图片"/>
             </a-radio-button>
-            <a-radio-button value="2">
+            <a-radio-button :value="2">
               <a-icon type="file-word" title="文档"/>
             </a-radio-button>
-            <a-radio-button value="3">
+            <a-radio-button :value="3">
               <a-icon type="file-text" title="图纸"/>
             </a-radio-button>
-            <a-radio-button value="4">
+            <a-radio-button :value="4">
               <a-icon type="ellipsis" title="其他"/>
             </a-radio-button>
           </a-radio-group>
           <!-- <a-button type="default" style="margin-right:5px">照片</a-button>
           <a-button type="default">文件</a-button>-->
         </div>
-        <a-list :dataSource="documents" class="docList">
+        <a-list :dataSource="documents" class="docList" v-if="activityKey != 1">
           <a-list-item slot="renderItem" slot-scope="item, index" style="width: 100%;">
-            <div style="width: 100%;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;">
-              <span :style="{color:item.iconColor,marginRight:'5px'}">
-                <a-icon
-                  :type="item.iconType"
-                  :theme="item.iconType == 'file-jpg'?'outlined':'filled'"
-                  style="font-size: 16px;"
-                />
-              </span>
-              {{item.name}}
-            </div>
+            <a-dropdown :trigger="['contextmenu']">
+              <div
+                style="width: 100%;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;cursor:pointer"
+                @click="openDoc2(item)"
+              >
+                <span :style="{color:item.iconColor,marginRight:'5px'}">
+                  <a-icon
+                    :type="item.iconType"
+                    :theme="item.iconType == 'file-jpg'?'outlined':'filled'"
+                    style="font-size: 16px;"
+                  />
+                </span>
+                {{item.name}}
+              </div>
+              <a-menu slot="overlay" style="width:100px" @click="copyFile(item,$event)">
+                <a-menu-item key="1">拷贝</a-menu-item>
+              </a-menu>
+            </a-dropdown>
           </a-list-item>
           <!-- <div slot="header">Header</div>
           <div slot="footer">Footer</div>-->
         </a-list>
+
+        <a-row v-else style="margin-top:10px" id="container">
+          <a-col :span="12" v-for="(item,key) in documents" :key="key" class="box1">
+            <a-dropdown :trigger="['contextmenu']">
+              <div style="margin:2px" @click="openDoc2(item)" class="box_img">
+                <img :src="item.downLoadHref" style>
+              </div>
+              <a-menu slot="overlay" style="width:100px" @click="copyFile(item,$event)">
+                <a-menu-item key="1">拷贝</a-menu-item>
+              </a-menu>
+            </a-dropdown>
+          </a-col>
+        </a-row>
       </a-col>
     </a-row>
+    <moveTemplate
+      :projectId="projectId"
+      :mVisible="mVisible"
+      :mTitle="mTitle"
+      :mType="mType"
+      :filterId="filterId"
+      @moveCancel="moveCancel"
+      @moveSave="moveSave"
+    />
   </div>
 </template>
 
@@ -170,6 +207,10 @@ import gql from 'graphql-tag'
 import moment from 'moment'
 import { db } from '@/utils/db.js'
 import { mapState } from 'vuex'
+
+import moveTemplate from '@/components/same/moveTemplate'
+import { axios } from '@/utils/request'
+
 export default {
   name: 'WorkplaceWechat',
   props: {
@@ -194,17 +235,47 @@ export default {
       activities: [],
       loadingMore: false,
       loading: false,
-      actionSrc: '',
-      location,
-      documents: [],
-      allDocArray: [],
-      screen:{},
+      actionSrc: '', //上传路径
+      location, //window.location
+      documents: [], //展示的文件
+      allDocArray: [], //聊天中所有的文件
+      screen: {}, //屏幕像素
+      activityKey: 1,
+      pictureType: [
+        'bmp',
+        'jpg',
+        'png',
+        'tif',
+        'gif',
+        'pcx',
+        'tga',
+        'exif',
+        'fpx',
+        'svg',
+        'psd',
+        'cdr',
+        'pcd',
+        'dxf',
+        'ufo',
+        'eps',
+        'ai',
+        'raw',
+        'WMF',
+        'webp'
+      ],
+      mVisible: false, //移动弹框
+      mTitle: '送审资料',
+      mType: 0,
+      filterId: []
     }
   },
   computed: {
     ...mapState({
       userInfo: state => state.user.info
     })
+  },
+  components: {
+    moveTemplate
   },
   created() {
     this.dbConn = new db(this.$apollo)
@@ -219,7 +290,7 @@ export default {
   mounted() {
     let _this = this
     _this.screen = {
-      height:document.body.clientHeight
+      height: document.body.clientHeight
     }
 
     // window.onresize = () => {
@@ -263,6 +334,7 @@ export default {
         more.reverse()
         this.minId = more[0].createdAt
         this.activities = more.concat(this.activities)
+        this.activitiesBefore(this.activities)
       }
       this.loadingMore = false
     },
@@ -293,6 +365,7 @@ export default {
         this.minId = (this.activities[0] || {}).createdAt
 
         this.sendingMsg = true
+        this.activitiesBefore(this.activities)
         this.getActivity()
         // this.getDocument()
       }
@@ -333,6 +406,7 @@ export default {
           console.log(data, 'getActivity')
           // _this.activities = data.data.ProjectMessage
           _this.activities = _this.activities.concat(data.data.ProjectMessage)
+          _this.activitiesBefore(_this.activities)
           _this.getDocument()
           setTimeout(function() {
             _this.scrollToEnd()
@@ -342,6 +416,23 @@ export default {
           console.error(error)
         }
       })
+    },
+
+    activitiesBefore(data) {
+      console.log(data, 'activitiesBefore')
+      data.forEach(e => {
+        if (
+          e.type == 1 &&
+          moment(e.createdAt).format('YYYY-MM-DD HH:mm:ss') > moment('2019-04-16').format('YYYY-MM-DD HH:mm:ss')
+        ) {
+          var newNameArray = e.body.name.split('.')
+          newNameArray[newNameArray.length - 2] = newNameArray[newNameArray.length - 2] + '_small'
+          e.body.src = `http://${location.hostname}:15050/upload/` + e.body.url + '/' + newNameArray.join('.')
+        } else {
+          e.body.src = `http://${location.hostname}:15050/upload/` + e.body.url + '/' + e.body.name
+        }
+      })
+      this.activities = data
     },
     //滚动到底部
     scrollToEnd() {
@@ -404,6 +495,9 @@ export default {
     onMessageChange(e) {
       this.message = e.target.value
     },
+    messageAddPre(name) {
+      this.message = '@' + name
+    },
     onUpload(e) {
       alert('upload')
     },
@@ -414,10 +508,10 @@ export default {
           desc = item.body.text
           break
         case 1: //图片
-          desc = `<img src="${item.body.url}">`
+          // desc = `<img src="${item.body.url}">`
           break
         case 2: //文件
-          desc = `<a href="${item.body.url}">${item.body.name}</a>`
+          // desc = `<a href="${item.body.url}">${item.body.name}</a>`
           break
         case 3: //日志
           desc = `[日志]${item.body.text}`
@@ -468,30 +562,32 @@ export default {
           return
         }
 
-        let pictureType = [
-          'bmp',
-          'jpg',
-          'png',
-          'tif',
-          'gif',
-          'pcx',
-          'tga',
-          'exif',
-          'fpx',
-          'svg',
-          'psd',
-          'cdr',
-          'pcd',
-          'dxf',
-          'ufo',
-          'eps',
-          'ai',
-          'raw',
-          'WMF',
-          'webp'
-        ]
+        // let pictureType = [
+        //   'bmp',
+        //   'jpg',
+        //   'png',
+        //   'tif',
+        //   'gif',
+        //   'pcx',
+        //   'tga',
+        //   'exif',
+        //   'fpx',
+        //   'svg',
+        //   'psd',
+        //   'cdr',
+        //   'pcd',
+        //   'dxf',
+        //   'ufo',
+        //   'eps',
+        //   'ai',
+        //   'raw',
+        //   'WMF',
+        //   'webp'
+        // ]
         let nameArray = info.file.name.split('.')
-        let messageType = pictureType.indexOf(nameArray[nameArray.length - 1]) > -1 ? 1 : 2
+        let fileFormat = nameArray[nameArray.length - 1]
+        fileFormat = fileFormat.toLocaleLowerCase()
+        let messageType = this.pictureType.indexOf(fileFormat) > -1 ? 1 : 2
         //  ? messageType = 1: messageType = 2
         this.sendingMsg = true
         const res2 = await this.dbConn.mutation(
@@ -549,6 +645,12 @@ export default {
 
       window.open(url, '_blank')
     },
+    //打开文件
+    openDoc2(item) {
+      var url = item.downLoadHref
+
+      window.open(url, '_blank')
+    },
     //删除聊天记录
     async deleteMessage(item, index) {
       console.log(item, index, this.activities)
@@ -587,14 +689,22 @@ export default {
 
       let res = await this.dbConn.query(query)
       this.allDocArray = res.data.Document
-      this.beforeDocument(res.data.Document)
+      var data = this.allDocArray.filter(ele => {
+        var fileFormat = ele.name.split('.')
+        fileFormat = fileFormat[fileFormat.length - 1] || ''
+        fileFormat = fileFormat.toLocaleLowerCase()
+        return this.pictureType.indexOf(fileFormat) > -1
+      })
+      // this.beforeDocument(data)
+      this.filterDoc({ target: { value: this.activityKey || 1 } })
       console.log(res, 'getAllDataT')
     },
     beforeDocument(data) {
       data.forEach(ele => {
         if (ele.property == 1) {
           var fileFormat = ele.name.split('.')
-          fileFormat = fileFormat[fileFormat.length - 1]
+          fileFormat = fileFormat[fileFormat.length - 1] || ''
+          fileFormat = fileFormat.toLocaleLowerCase()
           ele.downLoadHref = `http://${location.hostname}:15050/upload/` + ele.url + ele.name
           if (['doc', 'docx'].indexOf(fileFormat) > -1) {
             ele.iconType = 'file-word'
@@ -602,7 +712,17 @@ export default {
           } else if (['xls', 'xlsx'].indexOf(fileFormat) > -1) {
             ele.iconType = 'file-excel'
             ele.iconColor = '#3d9364'
-          } else if (['png', 'jpg', 'jpeg', 'gif'].indexOf(fileFormat) > -1) {
+          } else if (this.pictureType.indexOf(fileFormat) > -1) {
+            //在这个时间后才有缩略图
+            // debugger
+            if (
+              moment(ele.createdAt).format('YYYY-MM-DD HH:mm:ss') > moment('2019-04-16').format('YYYY-MM-DD HH:mm:ss')
+            ) {
+              var newNameArray = ele.name.split('.')
+              newNameArray[newNameArray.length - 2] = newNameArray[newNameArray.length - 2] + '_small'
+              ele.downLoadHref = `http://${location.hostname}:15050/upload/` + ele.url + newNameArray.join('.')
+            }
+
             ele.iconType = 'file-jpg'
             ele.iconColor = '#40d5b3'
           } else if (['pdf'].indexOf(fileFormat) > -1) {
@@ -622,55 +742,166 @@ export default {
       })
       // console.log()
       this.documents = data
+      let _this = this
+
+      if (this.activityKey == 1) {
+        setTimeout(function() {
+          _this.imgLocation('container', 'box1')
+        }, 100)
+      }
+      // this.filterDoc(this.activityKey || 1)
     },
 
+    //类型选择
     filterDoc(e) {
-      console.log(e.target.checked)
+      // console.log(e.target.checked)
+      this.activityKey = e.target.value
       var data = []
-      let pictureType = [
-        'bmp',
-        'jpg',
-        'png',
-        'tif',
-        'gif',
-        'pcx',
-        'tga',
-        'exif',
-        'fpx',
-        'svg',
-        'psd',
-        'cdr',
-        'pcd',
-        'dxf',
-        'ufo',
-        'eps',
-        'ai',
-        'raw',
-        'WMF',
-        'webp'
-      ]
+
       var workType = ['doc', 'docx', 'xls', 'xlsx', 'pdf', 'ppt', 'pptx', 'txt']
       if (e.target.value == 1) {
         data = this.allDocArray.filter(ele => {
           var fileFormat = ele.name.split('.')
-          fileFormat = fileFormat[fileFormat.length - 1]
-          return pictureType.indexOf(fileFormat) > -1
+          fileFormat = fileFormat[fileFormat.length - 1] || ''
+          fileFormat = fileFormat.toLocaleLowerCase()
+          return this.pictureType.indexOf(fileFormat) > -1
         })
       } else if (e.target.value == 2) {
         data = this.allDocArray.filter(ele => {
           var fileFormat = ele.name.split('.')
-          fileFormat = fileFormat[fileFormat.length - 1]
+          fileFormat = fileFormat[fileFormat.length - 1] || ''
+          fileFormat = fileFormat.toLocaleLowerCase()
           return workType.indexOf(fileFormat) > -1
         })
       } else if (e.target.value == 3) {
+        data = this.allDocArray.filter(ele => {
+          var fileFormat = ele.name.split('.')
+          fileFormat = fileFormat[fileFormat.length - 1] || ''
+          fileFormat = fileFormat.toLocaleLowerCase()
+          return ['dwg'].indexOf(fileFormat) > -1
+        })
       } else {
         data = this.allDocArray.filter(ele => {
           var fileFormat = ele.name.split('.')
-          fileFormat = fileFormat[fileFormat.length - 1]
-          return workType.indexOf(fileFormat) == -1 && pictureType.indexOf(fileFormat) == -1
+          fileFormat = fileFormat[fileFormat.length - 1] || ''
+          fileFormat = fileFormat.toLocaleLowerCase()
+          return (
+            workType.indexOf(fileFormat) == -1 &&
+            this.pictureType.indexOf(fileFormat) == -1 &&
+            ['dwg'].indexOf(fileFormat) == -1
+          )
         })
       }
       this.beforeDocument(data)
+    },
+    imgLocation(parent, content) {
+      //将parent下所有的content全部取出
+      // debugger
+      var cparent = document.getElementById(parent)
+      var ccontent = this.getChildElement(cparent, content)
+      console.log(ccontent)
+      var imgWidth = ccontent[0].clientWidth - 2 //得到第一张图片的宽度
+      console.log(imgWidth)
+      console.log(document.getElementById(parent).clientWidth)
+      //  （页面宽度/一张图片的宽度）  固定一排盛放的个数
+      var cols = Math.floor(document.getElementById(parent).clientWidth / imgWidth)
+      console.log(cols, 'cols')
+      // cparent.style.cssText = 'width:' + imgWidth * cols + 'px;margin:0 auto'
+      //承载第一排盒子的高度
+      var BoxHeightArr = []
+      for (var i = 0; i < ccontent.length; i++) {
+        // 存放图片的高度
+        if (i < cols) {
+          BoxHeightArr[i] = ccontent[i].offsetHeight
+          console.log(BoxHeightArr[i], 'BoxHeightArr[i]')
+        } else {
+          var minheight = Math.min.apply(null, BoxHeightArr)
+          // console.log(minheight);
+          var minIndex = this.getminheightLocation(BoxHeightArr, minheight)
+          ccontent[i].style.position = 'absolute'
+          ccontent[i].style.top = minheight + 'px'
+          ccontent[i].style.left = ccontent[minIndex].offsetLeft + 'px'
+          BoxHeightArr[minIndex] = BoxHeightArr[minIndex] + ccontent[i].offsetHeight
+          console.log(BoxHeightArr[minIndex], ' BoxHeightArr[minIndex]')
+        }
+      }
+    },
+    getminheightLocation(BoxHeightArr, minHeight) {
+      for (var i in BoxHeightArr) {
+        if (BoxHeightArr[i] == minHeight) {
+          return i
+        }
+      }
+    },
+    getChildElement(parent, content) {
+      var contentArr = []
+      var allcontent = parent.getElementsByTagName('*') //得到所有内容
+      for (var i = 0; i < allcontent.length; i++) {
+        if (allcontent[i].className.indexOf(content) > -1) {
+          contentArr.push(allcontent[i]) //追加到contentArr数组
+        }
+      }
+      return contentArr
+    },
+
+    copyFile(item, e) {
+      // console.log(item,e)
+      this.moveItem = item
+      this.mVisible = true
+    },
+
+    moveCancel() {
+      this.mVisible = false
+    },
+    async moveSave(obj) {
+      console.log(this.selectedRows, obj)
+      //只支持文件
+      var update = []
+      var _obj = {
+        id: this.moveItem.id,
+        parent_id: obj.id,
+        url: obj.url + '/',
+        oldUrl: this.moveItem.url,
+        oldParent_id: this.moveItem.parent_id,
+        name: this.moveItem.name,
+        property: this.moveItem.property,
+        fileSize: this.moveItem.fileSize
+      }
+      update.push(_obj)
+      // this.selectedRows.forEach(e => {
+      //   if (e.property == 1) {
+
+      //   }
+      // })
+      console.log(update)
+      // return
+      for (const e of update) {
+        let mutationString = `mutation{insert_Document(objects:[
+          {
+            name:"${e.name}",
+            property:${e.property},
+            type:1,
+            url:"${e.url}",
+            fileSize:${e.fileSize},
+            relatedId:"${this.projectId}",
+            projectFileType:${obj.projectFileType},
+            ${e.parent_id ? `parent_id: "${e.parent_id}"` : ''}
+            createdBy_id:"${this.userInfo.id}"
+          }]
+        ){returning{id}}}`
+        console.log(mutationString, e)
+        if (e.property == 1) {
+          let res = await axios({
+            url: '/fs/copy',
+            method: 'post',
+            data: { oldPath: e.oldUrl + e.name, newPath: e.url, name: e.name }
+          })
+        }
+        let res2 = await this.dbConn.mutation(mutationString)
+      }
+      this.$message.success('拷贝成功')
+      this.mVisible = false
+      // let data = this.selectedRows.filter(e => )
     }
   }
 }
@@ -745,7 +976,7 @@ body {
       font-size: 14px;
 
       &:hover {
-        color: #5873c9;
+        color: #78bb60;
       }
     }
   }
@@ -768,7 +999,7 @@ body {
       flex: 1 1 0;
 
       &:hover {
-        color: #5873c9;
+        color: #78bb60;
       }
     }
     .datetime {
@@ -815,7 +1046,7 @@ body {
     }
     &:hover {
       span {
-        color: #5873c9;
+        color: #78bb60;
       }
     }
   }
@@ -845,7 +1076,6 @@ body {
       width: 100%;
     }
   }
-  
 }
 .setScroll {
   max-height: 518px;
@@ -875,5 +1105,22 @@ body {
 .setScroll::-webkit-scrollbar-button:end {
   // background: url(./imgs/down.png) no-repeat;
   background-size: 12px 12px;
+}
+#container {
+  position: relative;
+}
+.box1 {
+  // padding: 5px;
+  float: left;
+}
+.box_img {
+  padding: 5px;
+  border: 1px solid #cccccc;
+  box-shadow: 0 0 5px #cccccc;
+  border-radius: 5px;
+}
+.box_img img {
+  width: 100%;
+  height: auto;
 }
 </style>

@@ -134,7 +134,7 @@
                   <!--</a-row>-->
                 </a-checkbox-group>
               </div>
-              <a-icon slot="filterIcon" theme="filled" slot-scope="filtered" type="filter" :style="{ color: filtered ? '#5873c9' : undefined }" />
+              <a-icon slot="filterIcon" theme="filled" slot-scope="filtered" type="filter" :style="{ color: filtered ? '#78bb60' : undefined }" />
             </a-table>
           </a-row>
         </a-tab-pane>
@@ -343,6 +343,24 @@ export default {
         },
         {
           title: '纸质合同',
+          dataIndex: 'returnedDate',
+          // scopedSlots: { customRender: 'scans' }
+          customRender: (value,record) => {
+            
+            var date = ''
+            if(record.returnedDate){
+              date = moment(record.returnedDate).format('YYYY-MM-DD')
+            }else if(record.sendedDate) {
+              date = moment(record.sendedDate).format('YYYY-MM-DD')
+            }
+
+            return {
+              children: date
+            }
+          }
+        },
+        {
+          title: '附件',
           dataIndex: 'scans',
           scopedSlots: { customRender: 'scans' }
         },
@@ -469,6 +487,8 @@ export default {
                 businessType
                 catalog
                 name
+                returnedDate
+                sendedDate
                 client {
                   id
                   name
@@ -915,11 +935,11 @@ export default {
   font-size: 12px;
 }
 .font-blue{
-  color: #5873c9;
+  color: #78bb60;
   font-size: 13px;
 }
 .icon-blue {
-  color: #5873c9;
+  color: #78bb60;
   font-size: 14px!important;
 }
 .contractList .ant-table-bordered .ant-table-thead > tr > th,

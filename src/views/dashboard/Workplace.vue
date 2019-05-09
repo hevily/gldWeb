@@ -73,18 +73,24 @@
     </a-tabs>-->
     <a-row style="height: 100%">
       <a-col :span="12" class="setHeight right-bottom">
-        <WorkplaceInfo :projectId="projectId"/>
+        <WorkplaceInfo :projectId="projectId" @messageAddPre="messageAddPre"/>
       </a-col>
       <a-col :span="12" class="setHeight" style="border-bottom: 1px solid #ccc;">
-        <WorkplaceQuick :projectId="projectId" ref="WorkplaceQuick"/>
+        <WorkplaceQuick :projectId="projectId" ref="WorkplaceQuick" @changeFile="changeFile"/>
       </a-col>
       <a-col :span="12" class="setHeight" style="border-right: 1px solid #ccc;">
-        <WorkplaceSelfFile :projectId="projectId" @changeQuick="changeQuick"/>
+        <WorkplaceSelfFile
+          :projectId="projectId"
+          ref="WorkplaceSelfFile"
+          @changeQuick="changeQuick"
+        />
       </a-col>
-      <a-col :span="12" class="setHeight ">
-        <WorkplaceWechat v-if="projectId" :projectId="projectId"/>
+      <a-col :span="12" class="setHeight">
+        <WorkplaceWechat v-if="projectId" :projectId="projectId" ref="WorkplaceWechat"/>
       </a-col>
     </a-row>
+
+   <uploadProgress />
   </div>
 </template>
 
@@ -103,6 +109,8 @@ import WorkplaceFile from '@/components/dashboard/WorkplaceFile'
 import WorkplaceLog from '@/components/dashboard/WorkplaceLog'
 import WorkplaceSelfFile from '@/components/dashboard/WorkplaceSelfFile'
 import WorkplaceQuick from '@/components/dashboard/WorkplaceQuick'
+
+import uploadProgress from '@/components/same/uploadProgress'
 
 // import { getRoleList, getServiceList } from '@/api/manage'
 import gql from 'graphql-tag'
@@ -125,7 +133,8 @@ export default {
     WorkplaceLog,
     WorkplaceInfo,
     WorkplaceSelfFile,
-    WorkplaceQuick
+    WorkplaceQuick,
+    uploadProgress
   },
   props: {
     // name: {
@@ -193,7 +202,8 @@ export default {
         { item: '热度', a: 60, b: 70, c: 40 },
         { item: '引用', a: 70, b: 50, c: 40 }
       ],
-      radarData: []
+      radarData: [],
+      
     }
   },
   computed: {
@@ -250,238 +260,17 @@ export default {
   methods: {
     ...mapGetters(['nickname', 'welcome']),
 
-    changeQuick(){
+    changeQuick() {
       this.$refs.WorkplaceQuick.getFavorite()
-    }
-    // getProjects() {
-    //   this.$http.get('/list/search/projects').then(res => {
-    //     this.projects = res.result && res.result.data
-    //     this.loading = false
-    //   })
-    // },
-    //更多
-    // async getMoreMessage() {
-    //   const gql = `
-    //       query {
-    //         ProjectMessage(where: {project_id:{_eq: "${this.projectId}"}, createdAt:{_lt: "${
-    //     this.minId
-    //   }"}}, order_by: [{createdAt: desc}], limit: ${this.limit}){
-    //           id
-    //           type
-    //           project_id
-    //           sender {
-    //             id
-    //             name
-    //             headPortrail
-    //           }
-    //           body
-    //           createdAt
-    //         }
-    //       }
-    //     `
-    //   var res = await this.dbConn.query(gql)
-
-    //   if (res.data && res.data.ProjectMessage.length > 0) {
-    //     const more = res.data.ProjectMessage
-    //     more.reverse()
-    //     this.minId = more[0].createdAt
-    //     this.activities = more.concat(this.activities)
-    //   }
-    //   this.loadingMore = false
-    // },
-    // async getLastMessage() {
-    //   var res = await this.dbConn.query(`
-    //       query {
-    //         ProjectMessage(where: {project_id:{_eq: "${this.projectId}"}}, order_by: [{createdAt: desc}], limit: ${
-    //     this.limit
-    //   }){
-    //           id
-    //           type
-    //           project_id
-    //           sender {
-    //             id
-    //             name
-    //             headPortrail
-    //           }
-    //           body
-    //           createdAt
-    //         }
-    //       }
-    //     `)
-
-    //   if (res.data) {
-    //     this.activities = this.activities.concat(res.data.ProjectMessage)
-    //     this.maxId = (this.activities[0] || {}).createdAt || ''
-    //     this.activities.reverse()
-    //     this.minId = (this.activities[0] || {}).createdAt
-
-    //     this.sendingMsg = true
-    //     this.getActivity()
-    //   }
-    // },
-
-    //实时监听
-    // getActivity() {
-    //   // this.$http.get('/workplace/activity')
-    //   //   .then(res => {
-    //   //     this.activities = res.result
-    //   //   })
-    //   const _this = this
-    //   const subQuery = gql`subscription {
-    //         ProjectMessage(where: {project_id:{_eq: "${this.projectId}"},${
-    //     this.maxId ? `createdAt:{_gt:"${this.maxId}"}` : ''
-    //   }}, order_by: [{createdAt: desc}], limit: 1){
-    //           id
-    //           type
-    //           project_id
-    //           sender {
-    //             id
-    //             name
-    //             headPortrail
-    //           }
-    //           body
-    //           createdAt
-    //         }
-    //       }`
-
-    //   const observer = this.$apollo.subscribe({
-    //     query: subQuery,
-    //     variables: {}
-    //   })
-
-    //   console.log(observer, 'observerobserver')
-    //   observer.subscribe({
-    //     next(data) {
-    //       console.log(data, 'getActivity')
-    //       // _this.activities = data.data.ProjectMessage
-    //       _this.activities = _this.activities.concat(data.data.ProjectMessage)
-
-    //       setTimeout(function() {
-    //         _this.scrollToEnd()
-    //       }, 0)
-    //     },
-    //     error(error) {
-    //       console.error(error)
-    //     }
-    //   })
-    // },
-    // //滚动到底部
-    // scrollToEnd() {
-    //   // debugger
-    //   const msg_end = document.getElementById('msg_end')
-    //   if (msg_end) {
-    //     msg_end.scrollIntoView()
-    //   }
-    // },
-    // onScroll(e) {
-    //   // console.log(e)
-    //   if (e.target.scrollTop < 10) {
-    //     console.log('滚动到顶')
-    //     this.loadingMore = true
-    //     this.getMoreMessage()
-    //     e.target.scrollTop = 10
-    //   }
-    // },
-    // formatTime(d) {
-    //   return moment(d).format('HH:mm')
-    // },
-    // async onSend(e) {
-    //   this.sendingMsg = true
-    //   const res = await this.dbConn.mutation(
-    //     `
-    //         mutation insertMessage($body: jsonb) {
-    //           insert_ProjectMessage(objects: [
-    //             {
-    //               type: ${this.messageType}
-    //               body: $body
-    //               project_id: "${this.projectId}"
-    //               sender_id: "${this.userInfo.id}"
-    //             }
-    //           ]){
-    //             returning {
-    //               id
-    //             }
-    //           }
-    //         }
-    //       `,
-    //     {
-    //       body: {
-    //         text: e.currentTarget.value
-    //       }
-    //     }
-    //   )
-
-    //   console.log(res, 'send message')
-
-    //   if (!res.data) {
-    //     this.$message.success('发送失败，请重试')
-    //   } else {
-    //     this.message = ''
-    //   }
-    // },
-    // getTeams() {
-    //   this.$http.get('/workplace/teams').then(res => {
-    //     this.teams = res.result
-    //   })
-    // },
-    // initRadar() {
-    //   this.radarLoading = true
-
-    //   this.$http.get('/workplace/radar').then(res => {
-    //     const dv = new DataSet.View().source(res.result)
-    //     dv.transform({
-    //       type: 'fold',
-    //       fields: ['个人', '团队', '部门'],
-    //       key: 'user',
-    //       value: 'score'
-    //     })
-
-    //     this.radarData = dv.rows
-    //     this.radarLoading = false
-    //   })
-    // },
-    // onTypeChange(value) {
-    //   this.messageType = value
-    // },
-    // onMessageChange(e) {
-    //   this.message = e.target.value
-    // },
-    // onUpload(e) {
-    //   alert('upload')
-    // },
-    // getTypeDesc(item) {
-    //   let desc = ''
-    //   switch (item.type) {
-    //     case 0: //文本
-    //       desc = item.body.text
-    //       break
-    //     case 1: //图片
-    //       desc = `<img src="${item.body.url}">`
-    //       break
-    //     case 2: //文件
-    //       desc = `<a href="${item.body.url}">${item.body.name}</a>`
-    //       break
-    //     case 3: //日志
-    //       desc = `[日志]${item.body.text}`
-    //       break
-    //   }
-    //   return desc
-    // },
-
-    // tabChange(e) {
-    //   console.log(e, 'tabChange')
-    //   switch (parseInt(e)) {
-    //     case 1:
-    //       this.scrollToEnd()
-    //       break
-    //     case 2:
-    //     case 3:
-    //       break
-    //     case 4:
-    //       this.$refs.workplaceLog ? this.$refs.workplaceLog.getLastLogs() : ''
-    //       break
-    //   }
-    // }
+    },
+    changeFile() {
+      // debugger
+      this.$refs.WorkplaceSelfFile.initLoad()
+    },
+    messageAddPre(name) {
+      this.$refs.WorkplaceWechat.messageAddPre(name)
+    },
+    
   }
 }
 </script>
@@ -565,7 +354,7 @@ body {
       font-size: 14px;
 
       &:hover {
-        color: #5873c9;
+        color: #78bb60;
       }
     }
   }
@@ -588,7 +377,7 @@ body {
       flex: 1 1 0;
 
       &:hover {
-        color: #5873c9;
+        color: #78bb60;
       }
     }
     .datetime {
@@ -635,7 +424,7 @@ body {
     }
     &:hover {
       span {
-        color: #5873c9;
+        color: #78bb60;
       }
     }
   }
@@ -659,13 +448,6 @@ body {
   }
 }
 
-// .ant-row {
-//   .ant-col-12 {
-//     // border:1px solid #ccc;
-
-//   }
-// }
-
 .setHeight {
   height: 50%;
   overflow: auto;
@@ -679,4 +461,5 @@ body {
   border-left: 1px solid #cccccc;
   border-top: 1px solid #ccc;
 }
+
 </style>

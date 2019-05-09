@@ -10,7 +10,7 @@
                 <a
                   v-if="index != breadCrumb.length - 1"
                   @click="jumpDoc(items,index)"
-                  :style="{color:'#5873c9'}"
+                  :style="{color:'#78bb60'}"
                 >{{items.name}}</a>
                 <span v-else>{{items.name}}</span>
               </a-breadcrumb-item>
@@ -20,6 +20,10 @@
             <!-- 添加目录 -->
             <a class="folderAdd" @click="addFolder" v-if="$auth('upload-project-document')">
               <a-icon type="folder-add"/>
+            </a>
+            <!-- 拷贝文件 -->
+            <a class="folderAdd" @click="copyFile" v-if="$auth('upload-project-document')" title="拷贝文件">
+              <a-icon type="copy"/>
             </a>
             <!-- 上传资料 -->
             <a-upload
@@ -118,13 +122,28 @@
         </div>
       </template>
     </a-modal>
+
+    <moveTemplate
+      :projectId="projectId"
+      :mVisible="mVisible"
+      :mTitle="mTitle"
+      :mType="mType"
+      :filterId="filterId"
+      @moveCancel="moveCancel"
+      @moveSave="moveSave"
+    />
   </div>
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState,mapMutations } from 'vuex'
 import { db } from '@/utils/db'
 import moment from 'moment'
+// import {mapState,mapMutations} from 
+import moveTemplate from '@/components/same/moveTemplate'
+import { axios } from '@/utils/request'
+
+import uuid from 'uuid'
 
 const secondColumns = [
   { title: '名称', dataIndex: 'name', key: 'name', width: 250, sorter: true, scopedSlots: { customRender: 'name' } },
@@ -188,8 +207,15 @@ export default {
       addFolderTitle: '添加文件夹',
       folderName: '',
       favoriteDocument:[], //快捷数据
-      moment
+      moment,
+      mVisible: false, //移动弹框
+      mTitle: '送审资料',
+      mType: 0,
+      filterId: [],
     }
+  },
+  components: {
+    moveTemplate
   },
   computed: {
     ...mapState({
@@ -200,13 +226,23 @@ export default {
     this.dbConn = new db(this.$apollo)
     this.whereString = `_and:[{relatedId:{_eq:"${
       this.projectId
-    }"}},{type:{_eq:1}},{projectFileType:{_eq:4}},{createdBy_id:{_eq:"${this.userInfo.id}"}}]`
+    }"}},{type:{_in:[1,5]}},{projectFileType:{_eq:4}},{createdBy_id:{_eq:"${this.userInfo.id}"}}]`
     this.actionHref = `http://${location.hostname}:15050/upload?path=` + this.projectId + '/' + this.userInfo.id
     this.getFavorite()
     this.loadData()
 
   },
   methods: {
+    ...mapMutations(['set_file']),
+    initLoad(){
+      this.breadCrumb = [{ name: '个人文档' }]
+      this.whereString = `_and:[{relatedId:{_eq:"${
+        this.projectId
+      }"}},{type:{_in:[1,5]}},{projectFileType:{_eq:4}},{createdBy_id:{_eq:"${this.userInfo.id}"}}]`
+      this.actionHref = `http://${location.hostname}:15050/upload?path=` + this.projectId + '/' + this.userInfo.id
+      this.getFavorite()
+      this.loadData()
+    },
     async loadData(record, index, orderName) {
       let queryString = `query {
             Document(where:{${this.whereString}},${orderName ? `order_by:[${orderName}]` : ''}){
@@ -231,6 +267,7 @@ export default {
                 name
               }
             }
+            parent_id
             parent {
               id
               name
@@ -294,7 +331,8 @@ export default {
 
         if (ele.property == 1) {
           var fileFormat = ele.name.split('.')
-          fileFormat = fileFormat[fileFormat.length - 1]
+          fileFormat = fileFormat[fileFormat.length - 1] || ''
+          fileFormat = fileFormat.toLocaleLowerCase()
           ele.downLoadHref = `http://${location.hostname}:15050/upload/` + ele.url + ele.name
           if (['doc', 'docx'].indexOf(fileFormat) > -1) {
             ele.iconType = 'file-word'
@@ -367,7 +405,7 @@ export default {
       } else {
         this.whereString = `_and:[{relatedId:{_eq:"${
       this.projectId
-    }"}},{type:{_eq:1}},{projectFileType:{_eq:4}},{createdBy_id:{_eq:"${this.userInfo.id}"}}]`
+    }"}},{type:{_in:[1,5]}},{projectFileType:{_eq:4}},{createdBy_id:{_eq:"${this.userInfo.id}"}}]`
         this.loadData()
       }
     },
@@ -409,9 +447,13 @@ export default {
     },
     //上传文件
     async handleChange(info) {
+      
       let _this = this
+      _this.set_file(info.fileList)
       if (info.file.status == 'uploading') {
         //上传中
+        // debugger
+        console.log(info,'upload info')
         console.log(info.file.name, 'info')
         // this.$message.success('上传中')
       }
@@ -428,6 +470,7 @@ export default {
         // }
         console.log(info.file.name, 'done')
         let parentId = _this.breadCrumb[_this.breadCrumb.length - 1].id
+        // debugger
         var url = this.breadCrumb[this.breadCrumb.length - 1].url || (_this.projectId + '/' + this.userInfo.id)
         var mutationString = `mutation {
           insert_Document(objects:[{
@@ -450,6 +493,8 @@ export default {
         }`
 
         let res = await this.dbConn.mutation(mutationString)
+
+        // let update = 'mutation{update_Document}'
         this.jumpDoc(this.breadCrumb[this.breadCrumb.length - 1], this.breadCrumb.length)
         //   .then(res => {
         //     console.log(res, 'upload file success')
@@ -469,7 +514,12 @@ export default {
     downloadFile(record) {
       if (this.$auth('download-project-document')) {
         //拥有下载权限
-        window.open(record.downLoadHref, '_blank')
+        if(record.type == 5){
+          window.open(record.url, '_blank')
+        }else {
+          window.open(record.downLoadHref, '_blank')
+        }
+        
         // let link = document.createElement('a')
         // link.style.display = 'none'
         // link.href = record.downLoadHref
@@ -493,6 +543,8 @@ export default {
     async addFolderOk() {
       var _this = this
       var docId = this.breadCrumb[this.breadCrumb.length - 1].id
+      
+      //开始是项目Id+个人Id作为目录层
       var url = this.breadCrumb[this.breadCrumb.length - 1].url || _this.projectId + '/' + this.userInfo.id
 
       var addString = `mutation {
@@ -587,7 +639,7 @@ export default {
     //表框选择
     onSelectChange(selectedRowKeys, selectedRows) {
       //表框选择
-      //   console.log('selectedRowKeys changed: ', selectedRowKeys, selectedRows)
+        console.log('selectedRowKeys changed: ', selectedRowKeys, selectedRows)
       this.selectedRows = selectedRows
       this.selectedRowKeys = selectedRowKeys
     },
@@ -613,6 +665,86 @@ export default {
         // this.getFavorite()
         this.jumpDoc(this.breadCrumb[this.breadCrumb.length - 1], this.breadCrumb.length)
 
+    },
+
+    copyFile(){
+      this.mVisible = true
+    },
+
+    moveCancel(){
+      this.mVisible = false
+    },
+    async moveSave(obj) {
+      console.log(this.selectedRows,obj) 
+      //只支持文件
+      var update = []
+      this.selectedRows.forEach(e => {
+        if (e.property == 1) {
+          var _obj = {
+            id: e.id,
+            parent_id: obj.id,
+            url: obj.url + '/',
+            oldUrl: e.url,
+            oldParent_id: e.parent_id,
+            name: e.name,
+            property: e.property,
+            fileSize:e.fileSize
+          }
+          update.push(_obj)
+        } else {
+          // let child = this.allData.filter(ele => ele.url.indexOf(e.url) > -1)
+
+          // child.forEach(ele => {
+          //   var _obj = {}
+          //   _obj = {
+          //     id: ele.id,
+          //     parent_id: obj.id,
+          //     url: ele.url.replace(e.url, obj.url + '/' + ele.id),
+          //     oldUrl: ele.url,
+          //     oldParent_id: ele.parent_id,
+          //     name: ele.name,
+          //     property: ele.property,
+          //     fileSize:ele.fileSize
+          //   }
+          //   if (ele.id == e.id) {
+          //     _obj.parent_id = obj.id
+          //   } else {
+          //     _obj.parent_id = ele.parent_id
+          //   }
+          //   update.push(_obj)
+          // })
+          // console.log(child)
+        }
+      })
+      console.log(update)
+      // return
+      for (const e of update) {
+        let mutationString = `mutation{insert_Document(objects:[
+          {
+            name:"${e.name}",
+            property:${e.property},
+            type:1,
+            url:"${e.url}",
+            fileSize:${e.fileSize},
+            relatedId:"${this.projectId}",
+            projectFileType:${obj.projectFileType},
+            ${e.parent_id ? `parent_id: "${e.parent_id}"` : ''}
+            createdBy_id:"${this.userInfo.id}"
+          }]
+        ){returning{id}}}`
+        console.log(mutationString,e)
+        if(e.property == 1){
+          let res = await axios({
+            url: '/fs/copy',
+            method: 'post',
+            data: { oldPath: e.oldUrl + e.name, newPath: e.url ,name:e.name}
+          })
+        }
+        let res2 =  await this.dbConn.mutation(mutationString)
+      }
+      this.$message.success('拷贝成功')
+      this.mVisible = false
+      // let data = this.selectedRows.filter(e => )
     }
   }
 }
@@ -635,7 +767,7 @@ export default {
 .workplace-self .upload:hover,
 .workplace-self .delete:hover {
   border: 1px solid #8197d6;
-  color: #5873c9;
+  color: #78bb60;
 }
 .workplace-self .ant-table-thead > tr > th,
 .workplace-self .ant-table-tbody > tr > td {

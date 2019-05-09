@@ -85,7 +85,7 @@ export default {
           name: '进行中',
           value: 0,
           background: '#78bb61',
-          border: '#96ca85',
+          border: '#78bb60',
           icon: 'clock-circle'
         },
         '1': {

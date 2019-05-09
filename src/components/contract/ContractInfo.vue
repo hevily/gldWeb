@@ -763,7 +763,7 @@ export default {
       nowStatus: '进行中',
       statusListShow: false,
       nowStatusColor: '#78bb61',
-      nowBorderColor: '#96ca85',
+      nowBorderColor: '#78bb60',
       nowStatusIcon: 'clock-circle',
       newId:'', //手动创建合同Id
       statusArr: [
@@ -771,7 +771,7 @@ export default {
           name: '进行中',
           value: 0,
           background: '#78bb61',
-          border: '#96ca85',
+          border: '#78bb60',
           icon: 'clock-circle'
         },
         {

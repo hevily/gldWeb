@@ -113,7 +113,7 @@ export default {
   color: #b7b7b7;
 }
 .documentPage .ant-tabs-nav .ant-tabs-tab.ant-tabs-tab-active .tabTitle{
-  color: #5873c9;
+  color: #78bb60;
 }
 .documentPage .ant-tabs-nav .ant-tabs-tab:hover .tabTitle{
   color: #8197d6;

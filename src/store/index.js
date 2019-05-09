@@ -17,12 +17,16 @@ export default new Vuex.Store({
   state: {
     projectId:'',
     projectName:'',
+    files:[],
   },
   mutations: {
     set_project(state,project){
       console.log(project)
       state.projectId = project.id
       state.projectName = project.name
+    },
+    set_file(state,files){
+      state.files = files
     }
   },
   actions: {

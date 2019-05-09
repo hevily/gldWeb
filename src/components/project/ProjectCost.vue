@@ -16,7 +16,7 @@
       </a-col>
     </a-row>
     <a-row class="cost-rowLine">
-      <a-col :span="6">
+      <a-col :span="6" v-if="!isBZ">
         <span class="cost-span">送审金额：</span>
         <a-input-number
           class="ui-w100 f12"
@@ -27,16 +27,17 @@
         <span>元</span>
       </a-col>
       <a-col :span="6">
-        <span class="cost-span">审定金额：</span>
+        <span class="cost-span">{{isBZ?'编制金额':'审定金额'}}：</span>
         <a-input-number
           class="ui-w100 f12"
           :max="2147483647"
-          v-model="approvedAmount"
+          :value="approvedAmount || totalApprovedAmount"
+          disabled
           @blur="setAmount(2,$event)"
         />
         <span>元</span>
       </a-col>
-      <a-col :span="6">
+      <a-col :span="6" v-if="!isBZ">
         <span class="cost-span">核增核减额：</span>
         <a-input-number class="ui-w100 f12" :max="2147483647" v-model="differenceValue" disabled/>
         <span>元</span>
@@ -71,7 +72,7 @@
             <template slot="title">
               <p>是否添加{{ costName }}，添加后无法删除</p>
             </template>
-            <a-icon type="plus-circle" style="color:#5873c9;"/>
+            <a-icon type="plus-circle" style="color:#78bb60;"/>
           </a-popconfirm>
         </span>
 
@@ -85,9 +86,10 @@
                 class="inputC"
                 style="text-align:right;width:105px;font-size:12px"
                 v-model="record.numTasks[i].unitPrice"
-                :disabled="[0,3,5].indexOf(record.numTasks[i].status) == -1? true :false"
+                :disabled="[0,3,5,6].indexOf(record.numTasks[i].status) == -1? true :false"
+                :readonly="[6].indexOf(record.numTasks[i].status) !== -1? true :false"
                 placeholder="复核造价"
-                @blur="saveRow(record)"
+                @blur="saveRow(record,[6].indexOf(record.numTasks[i].status) !== -1)"
               />
             </div>
             <!-- 没有父任务 -->
@@ -96,7 +98,8 @@
                 class="inputC"
                 v-if="index <= tasksData.length-2"
                 style="text-align:right;width:105px;font-size:12px"
-                :disabled="[0,3,5].indexOf(record.numTasks[i].status) == -1? true :false"
+                :disabled="[0,3,5,6].indexOf(record.numTasks[i].status) == -1? true :false"
+                :readonly="[6].indexOf(record.numTasks[i].status) !== -1? true :false"
                 v-model="record.numTasks[i].unitPrice"
                 placeholder="复核造价"
               />
@@ -181,40 +184,37 @@
           </div>
         </div>
 
-        
-        
-        
-        <div slot="difference"  slot-scope="text,record,index">
+        <div slot="difference" slot-scope="text,record,index">
           <a-input
             class="inputC"
             style="text-align:right;min-width:80px;max-width:105px;font-size:12px"
             :value="record.difference"
             readonly
-            />
+          />
         </div>
-        <div slot="ratio"  slot-scope="text,record,index">
+        <div slot="ratio" slot-scope="text,record,index">
           <a-input
             class="inputC"
             style="text-align:right;min-width:80px;max-width:80px;font-size:12px"
             :value="record.ratio"
             readonly
-            />
+          />
         </div>
-        <div slot="increaseOrDecrease"  slot-scope="text,record,index">
+        <div slot="increaseOrDecrease" slot-scope="text,record,index">
           <a-input
             class="inputC"
             style="text-align:right;min-width:80px;max-width:105px;font-size:12px"
             :value="record.increaseOrDecrease"
             readonly
-            />
+          />
         </div>
-        <div slot="increaseOrDecreaseRatio"  slot-scope="text,record,index">
+        <div slot="increaseOrDecreaseRatio" slot-scope="text,record,index">
           <a-input
             class="inputC"
             style="text-align:right;min-width:80px;max-width:80px;font-size:12px"
             :value="record.increaseOrDecreaseRatio"
             readonly
-            />
+          />
         </div>
         <!-- 终稿造价 复核造价 -->
         <div slot="unitPrice" slot-scope="text,record,index">
@@ -235,16 +235,13 @@
               v-model="record.unitPrice"
               :placeholder="placeholer[2]"
             />
-            <div
-              class=""
-              v-else
-            >
-             <a-input
-              class="inputC"
-              style="text-align:right;max-width:120px;font-size:12px"
-              :value="parseFloat(record.unitPrice).toFixed(2)"
-              readonly
-            />
+            <div class v-else>
+              <a-input
+                class="inputC"
+                style="text-align:right;max-width:120px;font-size:12px"
+                :value="parseFloat(record.unitPrice).toFixed(2)"
+                readonly
+              />
             </div>
           </div>
         </div>
@@ -405,7 +402,7 @@ import { ArrayToString, ObjectToString } from '@/components/_util/StringUtil'
 import { mapState, mapMutations } from 'vuex'
 import moment from 'moment'
 
-import {db} from '@/utils/db'
+import { db } from '@/utils/db'
 // //对象转字符串
 // function ObjectToString(obj) {
 //   var type = Object.prototype.toString.call(obj)
@@ -453,11 +450,11 @@ export default {
   },
   data() {
     return {
-      dbConn:new db(this.$apollo),
-      loading:true,
+      dbConn: new db(this.$apollo),
+      loading: true,
       costName: '初稿',
       projectName: '',
-      nameWidth:'100%',
+      nameWidth: '100%',
       principal: {}, //项目负责人
       businessType: '', //业务类型
       submitAmount: 0, //送审金额
@@ -478,11 +475,13 @@ export default {
       selectPId: '',
       selectIndex: 0,
       selectRecord: {},
-      members:[],
+      members: [],
 
       costNameArr: ['numTasks1'],
       enEditCost: ['numTasks1'],
-
+      totalSubmitAmount: 0,
+      totalApprovedAmount: 0,
+      isBZ:false,
       placeholer: ['任务名称', '送审金额', '偏差原因'],
       columns: [
         {
@@ -555,42 +554,42 @@ export default {
             }
           ]
         },
-        
+
         {
-          title:'最后两稿差额',
-          dataIndex:'difference',
+          title: '最后两稿差额',
+          dataIndex: 'difference',
           key: 'difference',
           width: '60',
           align: 'center',
           scopedSlots: { customRender: 'difference' }
         },
         {
-          title:'比率',
-          dataIndex:'ratio',
+          title: '比率',
+          dataIndex: 'ratio',
           key: 'ratio',
           width: '60',
           align: 'center',
           scopedSlots: { customRender: 'ratio' }
         },
         {
-          title:'终稿',
-          dataIndex:'unitPrice',
+          title: '终稿',
+          dataIndex: 'unitPrice',
           key: 'unitPrice',
           width: '60',
           align: 'center',
           scopedSlots: { customRender: 'unitPrice' }
         },
         {
-          title:'增减额',
-          dataIndex:'increaseOrDecrease',
+          title: '增减额',
+          dataIndex: 'increaseOrDecrease',
           key: 'increaseOrDecrease',
           width: '60',
           align: 'center',
           scopedSlots: { customRender: 'increaseOrDecrease' }
         },
         {
-          title:'增减比率',
-          dataIndex:'increaseOrDecreaseRatio',
+          title: '增减比率',
+          dataIndex: 'increaseOrDecreaseRatio',
           key: 'increaseOrDecreaseRatio',
           width: '60',
           align: 'center',
@@ -613,7 +612,7 @@ export default {
   created() {
     this.loadData(this.projectId)
     console.log(this.userInfo.id, 'info')
-    
+
     // console.log(this.$apollo)
   },
   computed: {
@@ -621,7 +620,7 @@ export default {
       userInfo: state => state.user.info
     }),
     differenceValue: function() {
-      return (this.approvedAmount || 0) - (this.submitAmount || 0)
+      return ((this.approvedAmount || this.totalApprovedAmount || 0) - (this.submitAmount || 0)).toFixed(2)
     }
   },
   methods: {
@@ -800,127 +799,117 @@ export default {
       console.log(this.tasks, 'this.tasks ')
       this.tasksData = []
       this.costNameArr = []
-
-
-
-      if(this.businessType.indexOf('编制')> -1){
-      this.columns =  [
-        {
-          title: '序号',
-          dataIndex: 'index',
-          key: 'index',
-          width: '100',
-          align: 'left',
-          scopedSlots: {
-            customRender: 'serialNumber'
+      this.isBZ = false
+      if (this.businessType.indexOf('编制') > -1) {
+        this.isBZ = true
+        this.columns = [
+          {
+            title: '序号',
+            dataIndex: 'index',
+            key: 'index',
+            width: '100',
+            align: 'left',
+            scopedSlots: {
+              customRender: 'serialNumber'
+            },
+            customRender: (text, record, index) => {
+              // console.log(text, record, record.key)
+              var index = record.key
+              if (record.key == 0) {
+                index = ''
+              }
+              return {
+                children: (
+                  <span style="min-width:25px;display: inline-block;height: 17px;line-height:17px;float: right;">
+                    {index}
+                  </span>
+                )
+              }
+            }
           },
-          customRender: (text, record, index) => {
-            // console.log(text, record, record.key)
-            var index = record.key
-            if (record.key == 0) {
-              index = ''
+          {
+            title: '任务名称',
+            dataIndex: 'name',
+            key: 'name',
+            width: '800',
+            align: 'left',
+            scopedSlots: {
+              customRender: 'name'
             }
-            return {
-              children: (
-                <span style="min-width:25px;display: inline-block;height: 17px;line-height:17px;float: right;">
-                  {index}
-                </span>
-              )
+          },
+          {
+            title: '负责人',
+            dataIndex: 'handler',
+            key: 'handler',
+            width: '60',
+            align: 'center',
+            scopedSlots: { customRender: 'handler' }
+          },
+
+          {
+            title: '造价金额',
+            dataIndex: 'numTasks',
+            key: 'numTasks',
+            align: 'center',
+            // width: '300',
+            children: [
+              {
+                // title: '初稿',
+                dataIndex: 'numTasks',
+                key: 'numTasks1',
+                width: '100',
+                align: 'center',
+                slots: {
+                  title: 'ok'
+                },
+                scopedSlots: { customRender: 'numTasks1' }
+              }
+            ]
+          },
+          {
+            title: '终稿',
+            dataIndex: 'unitPrice',
+            key: 'unitPrice',
+            width: '120',
+            align: 'center',
+            scopedSlots: { customRender: 'unitPrice' }
+          },
+          {
+            title: '最后两稿差额',
+            dataIndex: 'difference',
+            key: 'difference',
+            width: '120',
+            align: 'center',
+            customRender: (text, record, index) => {
+              return {
+                children: <div style="min-width:80px;text-align:right;line-height: 17px;">{text}</div>
+              }
             }
+          },
+          {
+            title: '比率',
+            dataIndex: 'ratio',
+            key: 'ratio',
+            width: '120',
+            align: 'center',
+            customRender: (text, record, index) => {
+              return {
+                children: <div style="min-width:80px;text-align:right;line-height: 17px;">{text}</div>
+              }
+            }
+          },
+
+          {
+            title: '操作',
+            key: 'action',
+            align: 'center',
+            width: '480',
+            fixed: 'right',
+            scopedSlots: { customRender: 'operation' }
           }
-        },
-        {
-          title: '任务名称',
-          dataIndex: 'name',
-          key: 'name',
-          width: '800',
-          align: 'left',
-          scopedSlots: {
-            customRender: 'name'
-          }
-        },
-        {
-          title: '负责人',
-          dataIndex: 'handler',
-          key: 'handler',
-          width: '60',
-          align: 'center',
-          scopedSlots: { customRender: 'handler' }
-        },
-       
-        {
-          title: '造价金额',
-          dataIndex: 'numTasks',
-          key: 'numTasks',
-          align: 'center',
-          // width: '300',
-          children: [
-            {
-              // title: '初稿',
-              dataIndex: 'numTasks',
-              key: 'numTasks1',
-              width: '100',
-              align: 'center',
-              slots: {
-                title: 'ok'
-              },
-              scopedSlots: { customRender: 'numTasks1' }
-            }
-          ]
-        },
-        {
-          title:'终稿',
-          dataIndex:'unitPrice',
-          key: 'unitPrice',
-          width: '120',
-          align: 'center',
-          scopedSlots: { customRender: 'unitPrice' }
-        },
-        {
-          title:'差额',
-          dataIndex:'difference',
-          key: 'difference',
-          width: '120',
-          align: 'center',
-          customRender: (text, record, index) => {
-            return {
-              children: (
-                <div style="min-width:80px;text-align:right;line-height: 17px;">
-                  {text}
-                </div>
-              )
-            }
-          }
-        },
-        {
-          title:'比率',
-          dataIndex:'ratio',
-          key: 'ratio',
-          width: '120',
-          align: 'center',
-          customRender: (text, record, index) => {
-            return {
-              children: (
-                <div style="min-width:80px;text-align:right;line-height: 17px;">
-                  {text}
-                </div>
-              )
-            }
-          }
-        },
-        
-        {
-          title: '操作',
-          key: 'action',
-          align: 'center',
-          width: '480',
-          fixed: 'right',
-          scopedSlots: { customRender: 'operation' }
-        }
-      ]
-      // this.scrollX = 1250
-    
-    }
+        ]
+        // this.scrollX = 1250
+      }
       // this.enEditCost = ['numTasks1']
       // debugger
 
@@ -959,14 +948,14 @@ export default {
         draftObj.children.push(_obj)
       }
       this.columns.splice(draftIndex, 1, draftObj)
-      if(this.businessType.indexOf('编制')> -1){
+      if (this.businessType.indexOf('编制') > -1) {
         this.nameWidth = '600px'
         this.scrollX = 1100
-      }else {
+      } else {
         this.nameWidth = '100%'
         this.scrollX = 1100
       }
-      
+
       this.scrollX += this.docNum * 140
       console.log(this.columns, this.scrollX, 'this.columns')
 
@@ -981,8 +970,11 @@ export default {
       })
     },
     //保存
-    saveRow(record) {
+    saveRow(record,readonly) {
       console.log(record)
+      if(readonly){
+        return
+      }
       // return
       var numTasks = []
       record.numTasks.forEach(ele => {
@@ -1319,25 +1311,26 @@ export default {
           let hasMember = _this.members.filter(e => e.member_id == record.handler_id)
           let addMember = ``
           let notiString = ``
-          if(!hasMember.length){
+          if (!hasMember.length) {
             // addMember = ``
             var memberString = ``
-            
+
             var performString = ``
             // data.forEach(ele => {
-              memberString = `{
+            memberString = `{
                 project_id:"${_this.projectId}",
                 member_id:"${record.handler_id}",
               },`
-              performString = `{
+            performString = `{
                 employee_id:"${record.handler_id}"
                 project_id:"${_this.projectId}",
-                ratios:[{name:"专业系数",value: ""},{name:"难度系数",value: ""},{name:"规模系数",value: ""},{name:"绩效分",value: ""}],
+                ratios:[{name:"专业系数",value: ""},{name:"难度系数",value: ""},{name:"规模系数",value: ""},{name:"调整系数",value: ""},{name:"工期系数",value: ""}],
               }`
-              notiString = `{
+            notiString = `{
                 type:3,
                 name: "【${_this.userInfo.name}】将您添加为【${record.project.name}】的项目组成员",
                 status: 0,
+                project_id:"${_this.projectId}",
                 recipients:{
                   data:{
                     recipient_id:"${record.handler_id}"
@@ -1351,7 +1344,7 @@ export default {
 
             var performanceString = `insert_Performance(objects:[${performString}]){returning {id}}`
             // console.log(mutationString,notificationString,'insert notification and projectMember string')
-            addMember = mutationString  + '\n' + performanceString
+            addMember = mutationString + '\n' + performanceString
           }
           var numT = (record.numTasks || []).filter(ele => [0, 3, 5].indexOf(ele.status) > -1)
           var updateString = `
@@ -1377,15 +1370,18 @@ export default {
             `
             notifiString += `{
               type: 2
-              name: "【郑会龙】分配了【${_this.projectName}】项目中的【${ele.name}】任务给您，任务截止日期 2019-01-23"
-              status: 0
+              name: "【${(_this.principal||{}).name}】分配了【${_this.projectName}】项目中的【${ele.name}】任务给您，任务截止日期 2019-01-23"
+              status: 0,
+              project_id:"${_this.projectId}",
+              task_id:"${ele.id}",
               recipients: {
                 data: {recipient_id:"${record.handler.id}"}
               }
             }`
           })
 
-          var totalString = updateString + `insert_Notification(objects:[${notifiString}${notiString}]){returning{id}}` + addMember
+          var totalString =
+            updateString + `insert_Notification(objects:[${notifiString}${notiString}]){returning{id}}` + addMember
 
           console.log(record, 'shareTask', totalString)
           // return
@@ -1560,7 +1556,7 @@ export default {
         parent: {},
         type: 0,
         submitAmount: this.submitAmount,
-        unitPrice:0,
+        unitPrice: 0,
         numTasks: []
       }
       if (this.docNum == 1) {
@@ -1606,8 +1602,10 @@ export default {
         submitAmount: 0,
         deviationReason: '',
         deviationRate: '',
+        increaseOrDecrease:0, //增减额
+        increaseOrDecreaseRatio:0, //增减比率
         numTasks: [],
-        unitPrice:0,
+        unitPrice: 0,
         key: 0
       }
 
@@ -1658,16 +1656,9 @@ export default {
               tE.submitAmount = this.toFixed2r(tE.submitAmount || 0)
               tE.approvedAmount = this.toFixed2r(tE.approvedAmount || 0)
               tE.unitPrice = this.toFixed2r(tE.unitPrice || 0)
-
+              
               ele.unitPrice += this.toFixed2(tE.unitPrice || 0)
-              // if (tE.submitAmount > 0 && parseFloat(tE.numTasks[tE.numTasks.length - 1].unitPrice || 0) > 0) {
-              //   tE.deviationRate =
-              //     (parseFloat(tE.submitAmount) - parseFloat(tE.numTasks[tE.numTasks.length - 1].unitPrice || 0)) /
-              //     parseFloat(tE.submitAmount)
-              // }
               ele.submitAmount += this.toFixed2(tE.submitAmount || 0)
-              // ele.approvedAmount += this.toFixed2(tE.approvedAmount || 0)
-              // ele.unitPrice += this.toFixed2(tE.unitPrice || 0)
 
               tE.numTasks.forEach((tcE, tci) => {
                 if (tcE.childTasks.length) {
@@ -1695,74 +1686,30 @@ export default {
               nE.submitAmount = 0
               nE.unitPrice = 0
               ele.childTasks.forEach((tE, ti) => {
-                // nE.submitAmount += this.toFixed2(tE.numTasks[ni].submitAmount || 0)
-                // nE.approvedAmount += this.toFixed2(tE.numTasks[ni].approvedAmount || 0)
                 nE.unitPrice += this.toFixed2(tE.numTasks[ni].unitPrice || 0)
-                
               })
-
-              //加小数点两位
-              // nE.submitAmount = this.toFixed2r(nE.submitAmount)
-              // nE.approvedAmount = this.toFixed2r(nE.approvedAmount)
               nE.unitPrice = this.toFixed2r(nE.unitPrice)
-
-              
-              // obj.numTasks[ni].submitAmount += this.toFixed2(nE.submitAmount || 0)
-              // obj.numTasks[ni].approvedAmount += this.toFixed2(nE.approvedAmount || 0)
               obj.numTasks[ni].unitPrice += this.toFixed2(nE.unitPrice || 0)
-              
             })
 
-           
-
-            // if (ele.submitAmount > 0 && parseFloat(ele.numTasks[ele.numTasks.length - 1].unitPrice || 0) > 0) {
-            //   ele.deviationRate =
-            //     (parseFloat(ele.submitAmount) - parseFloat(ele.numTasks[ele.numTasks.length - 1].unitPrice || 0)) /
-            //     parseFloat(ele.submitAmount)
-            // }
           } else {
             ele.numTasks.forEach((nE, ni) => {
               nE.childTasks = nE.childTasks || []
-              // if (nE.childTasks.length) {
-              //   nE.approvedAmount = 0
-              //   nE.unitPrice = 0
-              //   nE.submitAmount = 0
-              //   //获取审核后的最后一个审定金额
-              //   nE.unitPrice = this.toFixed2r(nE.childTasks[nE.childTasks.length - 1].unitPrice || 0)
-              //   nE.approvedAmount = this.toFixed2r(nE.childTasks[nE.childTasks.length - 1].approvedAmount || 0)
-              //   nE.submitAmount = this.toFixed2r(nE.childTasks[nE.childTasks.length - 1].submitAmount || 0)
-              // }
+              
               obj.numTasks[ni].submitAmount += this.toFixed2(nE.submitAmount || 0)
               obj.numTasks[ni].approvedAmount += this.toFixed2(nE.approvedAmount || 0)
               obj.numTasks[ni].unitPrice += this.toFixed2(nE.unitPrice || 0)
             })
 
-            // if (ele.submitAmount > 0 && parseFloat(ele.numTasks[ele.numTasks.length - 1].unitPrice || 0)) {
-            //   ele.deviationRate =
-            //     (parseFloat(ele.submitAmount) - parseFloat(ele.numTasks[ele.numTasks.length - 1].unitPrice || 0)) /
-            //     parseFloat(ele.submitAmount)
-            // }
+          
           }
         } else {
           ele.submitAmount = this.toFixed2r(ele.submitAmount)
           ele.approvedAmount = this.toFixed2r(ele.approvedAmount)
           ele.unitPrice = this.toFixed2r(ele.unitPrice)
-          // if (ele.submitAmount > 0 && parseFloat(ele.numTasks[ele.numTasks.length - 1].unitPrice || 0)) {
-          //   ele.deviationRate =
-          //     (parseFloat(ele.submitAmount) - parseFloat(ele.numTasks[ele.numTasks.length - 1].unitPrice || 0)) /
-          //     parseFloat(ele.submitAmount)
-          // }
+         
           ele.numTasks.forEach((nE, ni) => {
             nE.childTasks = nE.childTasks || []
-            // if (nE.childTasks.length) {
-            //   nE.unitPrice = 0
-            //   nE.approvedAmount = 0
-            //   nE.submitAmount = 0
-            //   //获取审核后的最后一个审定金额
-            //   nE.approvedAmount = this.toFixed2r(nE.childTasks[nE.childTasks.length - 1].approvedAmount || 0)
-            //   nE.unitPrice = this.toFixed2r(nE.childTasks[nE.childTasks.length - 1].unitPrice || 0)
-            //   nE.submitAmount = this.toFixed2r(nE.childTasks[nE.childTasks.length - 1].submitAmount || 0)
-            // }
             obj.numTasks[ni].submitAmount += this.toFixed2(nE.submitAmount || 0)
             obj.numTasks[ni].approvedAmount += this.toFixed2(nE.approvedAmount || 0)
             obj.numTasks[ni].unitPrice += this.toFixed2(nE.unitPrice || 0)
@@ -1776,38 +1723,55 @@ export default {
         ele.submitAmount = this.toFixed2r(ele.submitAmount)
         ele.approvedAmount = this.toFixed2r(ele.approvedAmount)
         ele.unitPrice = this.toFixed2r(ele.unitPrice)
-
       })
-      //汇总
-      // this.tasksData.forEach(ele => {
-      //   if((ele.children || []).length){
-      //     ele.childTasks.forEach(e => {
-      //       e.finally = ele.numTasks[ele.numTasks.length -1].unitPrice
-      //     })
-      //   }else {
-      //     ele.finally = ele.unitPrice
-      //   }
-      // })
+     
 
       this.tasksData.forEach(ele => {
         ele.unitPrice = parseFloat(ele.unitPrice).toFixed(2)
-        if((ele.children || []).length){
-          ele.children.forEach((e,index) => {
+        if ((ele.children || []).length) {
+          ele.children.forEach((e, index) => {
             // debugger
             e.unitPrice = parseFloat(e.unitPrice).toFixed(2)
-            e.difference = (Math.abs(e.numTasks[e.numTasks.length -1].unitPrice - ((e.numTasks[e.numTasks.length -2] || {}).unitPrice || 0))).toFixed(2)
-            e.ratio = ((e.difference/((e.numTasks[e.numTasks.length -2]||{}).unitPrice || 1)) * 100).toFixed(2) + '%'
-            e.increaseOrDecrease = (Math.abs(e.unitPrice - e.submitAmount)).toFixed(2)
-            e.increaseOrDecreaseRatio = ((e.increaseOrDecrease/(parseFloat(e.submitAmount) || 1)) * 100).toFixed(2) + '%'
+            if (this.docNum == 1) {
+              e.difference = '0.00'
+            } else {
+              e.difference = Math.abs(
+                e.numTasks[e.numTasks.length - 1].unitPrice - ((e.numTasks[e.numTasks.length - 2] || {}).unitPrice || 0)
+              ).toFixed(2)
+            }
+
+            e.ratio =
+              ((e.difference / ((e.numTasks[e.numTasks.length - 2] || {}).unitPrice || 1)) * 100).toFixed(2) + '%'
+            e.increaseOrDecrease = (e.unitPrice - e.submitAmount).toFixed(2)
+            e.increaseOrDecreaseRatio =
+              ((Math.abs(e.increaseOrDecrease) / (parseFloat(e.submitAmount) || 1)) * 100).toFixed(2) + '%'
           })
         }
         // debugger
-        ele.difference = (Math.abs(ele.numTasks[ele.numTasks.length -1].unitPrice - ((ele.numTasks[ele.numTasks.length -2]||{}).unitPrice || 0))).toFixed(2)
-        ele.ratio = ((parseFloat(ele.difference)/(parseFloat((ele.numTasks[ele.numTasks.length -2]||{}).unitPrice) || 1)) * 100).toFixed(2) + '%'
-        ele.increaseOrDecrease = (Math.abs(ele.unitPrice - ele.submitAmount)).toFixed(2)
-        ele.increaseOrDecreaseRatio = ((ele.increaseOrDecrease/(ele.submitAmount || 1)) * 100).toFixed(2) + '%'
+        if (this.docNum == 1) {
+          ele.difference = '0.00'
+        } else {
+          ele.difference = Math.abs(
+            ele.numTasks[ele.numTasks.length - 1].unitPrice -
+              ((ele.numTasks[ele.numTasks.length - 2] || {}).unitPrice || 0)
+          ).toFixed(2)
+        }
+
+        ele.ratio =
+          (
+            (parseFloat(ele.difference) / (parseFloat((ele.numTasks[ele.numTasks.length - 2] || {}).unitPrice) || 1)) *
+            100
+          ).toFixed(2) + '%'
+        ele.increaseOrDecrease = (ele.unitPrice - ele.submitAmount).toFixed(2)
+        ele.increaseOrDecreaseRatio = ((Math.abs(ele.increaseOrDecrease) / (parseFloat(ele.submitAmount) || 1)) * 100).toFixed(2) + '%'
+        obj.increaseOrDecrease += parseFloat(ele.increaseOrDecrease)
       })
 
+      this.totalSubmitAmount = obj.submitAmount
+      this.totalApprovedAmount = obj.unitPrice
+      
+      obj.increaseOrDecreaseRatio = ((Math.abs(obj.increaseOrDecrease) / (parseFloat(obj.submitAmount) || 1)) * 100).toFixed(2) + '%'
+      obj.increaseOrDecrease = obj.increaseOrDecrease.toFixed(2)
       this.tasksData.push(obj)
       console.log(this.tasksData, this.tasks, 'get SummaryTask and Tasks')
     },
@@ -1873,48 +1837,47 @@ export default {
         var updateTask = ``
 
         if (type == 1) {
-            //上移
-            if (index != 0) {
-              let previous = data[index - 1]
-              let prevoiusSortNo = previous.sortNo
-              if(previous.id){
-                updateTask +=
+          //上移
+          if (index != 0) {
+            let previous = data[index - 1]
+            let prevoiusSortNo = previous.sortNo
+            if (previous.id) {
+              updateTask +=
                 `updateTask_0:update_Task(where:{id:{_eq:"${previous.id}"}},_set:{sortNo:${
                   record.sortNo
                 }}){returning{id}}` + '\n'
 
-                updateTask +=
-                `updateTask_1:update_Task(where:{id:{_eq:"${record.id}"}},_set:{sortNo:${
-                  prevoiusSortNo
-                }}){returning{id}}` + '\n'
-              }
-              
-              let res = this.dbConn.mutation(`mutation {${updateTask}}`)
-              this.loadData()
-
-                console.log(updateTask,'updateTaskupdateTaskupdateTask')
+              updateTask +=
+                `updateTask_1:update_Task(where:{id:{_eq:"${
+                  record.id
+                }"}},_set:{sortNo:${prevoiusSortNo}}){returning{id}}` + '\n'
             }
-          } else {
-            //下移
-            if(data.length - 1 != index){
-              let next = data[index + 1]
-              let nextSortNo = next.sortNo
-              if(next.id){
-                updateTask +=
+
+            let res = this.dbConn.mutation(`mutation {${updateTask}}`)
+            this.loadData()
+
+            console.log(updateTask, 'updateTaskupdateTaskupdateTask')
+          }
+        } else {
+          //下移
+          if (data.length - 1 != index) {
+            let next = data[index + 1]
+            let nextSortNo = next.sortNo
+            if (next.id) {
+              updateTask +=
                 `updateTask_0:update_Task(where:{id:{_eq:"${next.id}"}},_set:{sortNo:${
                   record.sortNo
                 }}){returning{id}}` + '\n'
 
-                updateTask +=
-                `updateTask_1:update_Task(where:{id:{_eq:"${record.id}"}},_set:{sortNo:${
-                  nextSortNo
-                }}){returning{id}}` + '\n'
-                console.log(updateTask,'updateTaskupdateTaskupdateTask')
-                let res = this.dbConn.mutation(`mutation {${updateTask}}`)
-                this.loadData()
-              }
+              updateTask +=
+                `updateTask_1:update_Task(where:{id:{_eq:"${record.id}"}},_set:{sortNo:${nextSortNo}}){returning{id}}` +
+                '\n'
+              console.log(updateTask, 'updateTaskupdateTaskupdateTask')
+              let res = this.dbConn.mutation(`mutation {${updateTask}}`)
+              this.loadData()
             }
           }
+        }
       }
     }
   }
@@ -1931,7 +1894,7 @@ export default {
   text-align: right;
 }
 .cost-title {
-  color: #5873c9;
+  color: #78bb60;
   line-height: 32px;
   margin-bottom: 10px;
   font-size: 16px;
@@ -1947,7 +1910,7 @@ export default {
   font-size: 12px;
 }
 .addCostTask a {
-  color: #5873c9;
+  color: #78bb60;
 }
 
 .costTable .ant-table-small > .ant-table-content > .ant-table-body {
@@ -1968,7 +1931,7 @@ export default {
   font-size: 13px;
 }
 .costTable input {
-  padding: 3px
+  padding: 3px;
 }
 .inputC {
   margin: -5px 0;
@@ -1985,7 +1948,7 @@ export default {
   font-size: 12px;
 }
 .ant-table-small > .ant-table-content > .ant-table-scroll > .ant-table-body > table > .ant-table-tbody > tr > td {
-  padding: 8px 5px
+  padding: 8px 5px;
 }
 </style>
 

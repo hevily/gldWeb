@@ -106,13 +106,16 @@
           :labelCol="{lg: {span: 7}, sm: {span: 7}}"
           :wrapperCol="{lg: {span: 10}, sm: {span: 17} }"
         >
-          <span v-if="isBind">{{weixinName}}</span>
-          <img
-            src="https://zma.net.cn/scanreq?id=0f17b2dc-8e73-4a74-b9a9-4828995acd40"
-            width="120px"
-            height="120px"
-            v-else
-          >
+          <div v-if="isBind">
+            <span style="margin-right:10px">{{weixinName}}</span>
+            <a-icon
+              type="close-circle"
+              style="font-size: 20px;color: red;position: relative;top: 2px;"
+              @click="unBind(weixinName)"
+            ></a-icon>
+            <!-- <a-button type="default" @click="unBind(weixinName)" icon="close-circle"></a-button> -->
+          </div>
+          <img :src="src" width="120px" height="120px" v-else>
         </a-form-item>
         <a-form-item :wrapperCol="{ span: 24 }" style="text-align: center">
           <a-button htmlType="submit" type="primary">确定</a-button>
@@ -125,6 +128,8 @@
 
 <script>
 import { db } from '@/utils/db'
+// import { clearInterval } from 'timers'
+import { debuglog } from 'util'
 export default {
   name: 'UserSettingDialog',
   props: {
@@ -154,7 +159,10 @@ export default {
       headPortrail: '',
       isBind: false,
       weixinName: '',
-      mobile: { value: '' }
+      oldName: '',
+      mobile: { value: '' },
+      setInterVal: null,
+      src: `https://zma.net.cn/scanreq?id=${this.userId}`
     }
   },
   methods: {
@@ -193,8 +201,8 @@ export default {
         if (data.major) {
           let major = data.major.split(',')
           this.form.setFieldsValue({ major: major })
-        }else {
-            this.form.setFieldsValue({ major: [] })
+        } else {
+          this.form.setFieldsValue({ major: [] })
         }
 
         this.mobile = { value: data.mobile }
@@ -209,6 +217,7 @@ export default {
         this.roleName = roleName
         this.departmentId = data.department_id
         this.weixinName = ''
+
         if (data.weixin) {
           this.weixinName = data.weixin.nickname
           this.headPortrail = data.weixin.headimgurl || data.headPortrail
@@ -216,10 +225,33 @@ export default {
         } else {
           this.headPortrail = data.headPortrail || '../../avatar.png'
           this.isBind = false
+
+          this.setInterVal = setInterval(this.loadEmployee, 5000)
         }
       }
       this.loadAllDepart()
     },
+
+    async loadEmployee() {
+      let queryString = `query {
+        Employee(where:{id:{_eq:"${this.userId}"}}){
+          id
+          weixin
+        }
+      }`
+      let res = await this.dbConn.query(queryString)
+      console.log('weixin is bind')
+      if (res.data.Employee[0].weixin) {
+        this.weixinName = res.data.Employee[0].weixin.nickname
+        this.headPortrail = res.data.Employee[0].weixin.headimgurl || data.headPortrail
+        if (this.oldName == this.weixinName) {
+          this.isBind = false
+        } else {
+          this.isBind = true
+        }
+      }
+    },
+
     // 加载角色列表
     async loadAllDepart() {
       const res = await this.dbConn.query(`
@@ -296,6 +328,10 @@ export default {
     },
 
     cancel() {
+      // debugger
+      // if (this.setInterVal) {
+      //   window.clearInterval(this.setInterVal)
+      // }
       this.$emit('userCancel', false)
     },
     async handlerOk(value) {
@@ -309,9 +345,13 @@ export default {
                 major:"${(value.major || []).join(',')}"
             }){returning{id}}
         }`
-        let res = await this.dbConn.mutation(mutationString)
-      console.log(mutationString,res)
-        this.$emit('userSave', false)
+      let res = await this.dbConn.mutation(mutationString)
+      console.log(mutationString, res)
+
+      // if (this.setInterVal) {
+      //   clearInterval(this.setInterVal)
+      // }
+      this.$emit('userSave', false)
     },
     handleSubmit(e) {
       e.preventDefault()
@@ -351,12 +391,25 @@ export default {
     onChange(value) {
       this.departmentId = value
     },
-    onCChange(e) {}
+    onCChange(e) {},
+    unBind(name) {
+      this.oldName = name
+      this.isBind = false
+      if (this.setInterVal) {
+        window.clearInterval(this.setInterVal)
+      }
+      this.setInterVal = setInterval(this.loadEmployee, 5000)
+    }
   },
   watch: {
     uVisible(newT) {
       this.visible = newT
+      
+      if (this.setInterVal) {
+        window.clearInterval(this.setInterVal)
+      }
       if (newT) {
+        this.dbConn = new db(this.$apollo)
         this.userInfo()
       }
 
@@ -371,6 +424,12 @@ export default {
   padding: 0px;
 }
 .user-setting .ant-card .ant-card-head {
-  background: #5873c9;
+  background: #78bb60;
+}
+.user-setting .ant-card .ant-form {
+  margin: 10px 0px;
+}
+.user-setting .ant-card .ant-form-item {
+  margin-bottom: 0px;
 }
 </style>

@@ -272,7 +272,7 @@ export default {
         }
         &:hover {
           span {
-            color: #5873c9;
+            color: #78bb60;
           }
         }
       }

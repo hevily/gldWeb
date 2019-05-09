@@ -29,7 +29,8 @@ const colorList = [
     key: '酱紫', color: '#722ED1',
   },
   {
-    key: '未知蓝（默认）', color: '#5873c9',
+    // key: '未知蓝（默认）', color: '#78bb60',
+    key: '未知蓝（默认）', color: '#78bb60',
   },
 ]
 

@@ -413,7 +413,7 @@
   }
 
   .depart-button {
-    color: #5873c9;
+    color: #78bb60;
     padding-right: 3px;
   }
 

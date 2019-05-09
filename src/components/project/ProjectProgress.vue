@@ -5,7 +5,7 @@
         <tbody>
           <tr>
             <!--ms-if-->
-            <td width="150">
+            <td width="150" rowspan="2">
               负责人：
               <span class="font16" @click="showEmployee(1)">
                 <img
@@ -50,7 +50,7 @@
                   :disabledDate="disabledEndDate"
                   style="width:60%"
                   v-if="endDate"
-                  :value="moment(endDate,'YYYY-MM-DD')"
+                  :value="moment(showEndTime,'YYYY-MM-DD')"
                   @change="projectEndDate"
                 />
                 <a-date-picker
@@ -62,7 +62,12 @@
               </span>
             </td>
             <td width="20">
-              <a-input-number style="width:60px" v-model="countDay" :min="0" @change="countDayChange"/>
+              <a-input-number
+                style="width:60px"
+                v-model="countDay"
+                :min="0"
+                @change="countDayChange"
+              />
             </td>
             <td width="80">
               <div class="ui-dropdown">
@@ -72,7 +77,7 @@
                 </a-select>
               </div>
             </td>
-            <td width="140" class="font-center">
+            <!-- <td width="140" class="font-center">
               <div class="project-date">
                 <a class="current-date font-red">{{hasDate}}</a>
                 <span>/</span>
@@ -81,7 +86,7 @@
 
                 <span style="font-size: 26px;font-weight: 400;color:green;font-family: fantasy;">{{totalDate - hasDate}}</span>
               </div>
-            </td>
+            </td>-->
             <!-- <a-icon type="check-circle" />已完成 -->
             <!-- <a-icon type="clock-circle" /> 进行中-->
             <!-- <a-icon type="minus-circle" /> 未开始 -->
@@ -90,7 +95,7 @@
             <!-- <a-icon type="save" /> 已归档 -->
 
             <!-- 项目赶工 -->
-            <td width="110">
+            <td width="110" rowspan="2">
               <div
                 id="select-project_status"
                 class="project-complete"
@@ -110,7 +115,7 @@
                   </div>
                 </div>
                 <!--ms-if-->
-                <div class="select-list" style="width: 126.6px;" ref="urgentDiv" v-if="urgentListShow">
+                <div class="select-list" ref="urgentDiv" v-if="urgentListShow">
                   <a-row>
                     <a-col
                       :span="25"
@@ -133,7 +138,7 @@
             </td>
             <td width="5"></td>
             <!-- 项目状态 -->
-            <td width="140">
+            <td width="140" rowspan="2">
               <div
                 id="select-project_status"
                 class="project-complete"
@@ -175,6 +180,35 @@
               </div>
             </td>
           </tr>
+
+          <tr>
+            <!--ms-if-->
+
+            <td width="460" colspan="4">
+              <span style="margin-right: 10px">
+                已用有效工期：
+                <span style="font-size: 18px;font-weight: 600;">{{hasDate}}</span>
+              </span>
+              <span style="margin-right: 10px">
+                计划工期：
+                <span style="font-size: 18px;font-weight: 600;">{{planDate}}</span>
+              </span>
+              <span style="margin-right: 10px">
+                剩余工期：
+                <span style="font-size: 18px;font-weight: 600;">{{surplusDate}}</span>
+              </span>
+              <span style="margin-right: 10px">
+                暂停天数：
+                <span style="font-size: 18px;font-weight: 600;">{{stopDate}}</span>
+              </span>
+              <span style="margin-right: 10px">
+                实际工期：
+                <span style="font-size: 18px;font-weight: 600;">{{totalDate}}</span>
+              </span>
+            </td>
+
+            <td width="5"></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -182,7 +216,7 @@
       <h3>
         <span style="margin-right:20px">项目进展</span>
         <span
-          style="font-size:14px;color:#5873c9;cursor:pointer"
+          style="font-size:14px;color:#78bb60;cursor:pointer"
           @click="showStepsDialog(0)"
           v-if="$auth('edit-project-status')"
         >
@@ -228,11 +262,11 @@
             </div>
             <dl class="flow-box flow-box1">
               <dt
-                @click="showStepSummary(items,0)"
+                @click="showStepSummary(items,0,index)"
                 :title="items.name"
-                :style="{borderColor:stepStatusColor[items.status],color:stepStatusFontColor[items.status],background:items.type == 1?'rgba(88, 166, 240, 0.28)': items.type == 2 ? 'rgba(120, 187, 97, 0.27)': '#fff'}"
+                :style="{borderColor:stepStatusColor[items.status],color:stepStatusFontColor[items.status],background:stepStatusBColor[items.status]}"
               >
-                <i>{{  index + 1  }}</i>
+                <i>{{ index + 1 }}</i>
                 {{ items.name }}
               </dt>
               <dd>
@@ -265,7 +299,7 @@
             <div
               class="flow-content"
               v-if="items.summarys.length"
-              :style="{display:stepSummary == items.order ? 'block': 'none'}"
+              :style="{display:stepSummary == index+1 ? 'block': 'none'}"
             >
               <span class="flow-content-arrow"></span>
               <a-row v-for="(sum,sumIndex) in items.summarys" :key="sumIndex">
@@ -322,10 +356,10 @@
                   <a-icon type="pause-circle" style="width: 18px;"/>
                 </a>
               </div>
-              <dl class="flow-box flow-box1" @click="showStepSummary(items,0)">
+              <dl class="flow-box flow-box1" @click="showStepSummary(items,0,index)">
                 <dt
                   :title="items.name"
-                  :style="{borderColor:stepStatusColor[items.status],color:stepStatusFontColor[items.status],background:items.type == 1?'rgba(88, 166, 240, 0.28)': items.type == 2 ? 'rgba(120, 187, 97, 0.27)': '#fff'}"
+                  :style="{borderColor:stepStatusColor[items.status],color:stepStatusFontColor[items.status],background:stepStatusBColor[items.status]}"
                 >
                   <i>{{ index + 1 }}</i>
                   {{ items.name }}
@@ -356,11 +390,11 @@
                   </a-date-picker>
                 </dd>
               </dl>
-            
+
               <div
                 class="flow-content"
                 v-if="items.summarys.length"
-                :style="{display:stepSummary == items.order ? 'block': 'none'}"
+                :style="{display:stepSummary == index+1 ? 'block': 'none'}"
               >
                 <span class="flow-content-arrow"></span>
                 <a-row v-for="(sum,sumIndex) in items.summarys" :key="sumIndex">
@@ -377,11 +411,12 @@
         </div>
       </div>
     </div>
+    <!-- 财务进展 -->
     <div style="margin-bottom:20px" id="moneySteps">
       <h3>
         <span style="margin-right:20px">财务进展</span>
         <span
-          style="font-size:14px;color:#5873c9;cursor:pointer"
+          style="font-size:14px;color:#78bb60;cursor:pointer"
           @click="showStepsDialog(1)"
           v-if="$auth('edit-project-status')"
         >
@@ -427,11 +462,11 @@
             </div>
             <dl class="flow-box flow-box2">
               <dt
-                @click="showStepSummary(items,1)"
+                @click="showStepSummary(items,1,index)"
                 :title="items.name"
-                :style="{borderColor:stepStatusColor[items.status],color:stepStatusFontColor[items.status],background:items.type == 1?'rgba(88, 166, 240, 0.28)': items.type == 2 ? 'rgba(120, 187, 97, 0.27)': '#fff'}"
+                :style="{borderColor:stepStatusColor[items.status],color:stepStatusFontColor[items.status],background:stepStatusBColor[items.status]}"
               >
-                <i>{{  index + 1  }}</i>
+                <i>{{ index + 1 }}</i>
                 {{ items.name }}
               </dt>
               <dd>
@@ -463,7 +498,7 @@
             <div
               class="flow-content"
               v-if="items.summarys.length"
-              :style="{display:moneyStepSummary == items.order ? 'block': 'none'}"
+              :style="{display:moneyStepSummary == index + 1 ? 'block': 'none'}"
             >
               <span class="flow-content-arrow"></span>
               <a-row v-for="(sum,sumIndex) in items.summarys" :key="sumIndex">
@@ -520,12 +555,12 @@
                   <a-icon type="pause-circle" style="width: 18px;"/>
                 </a>
               </div>
-              <dl class="flow-box flow-box2" @click="showStepSummary(items,1)">
+              <dl class="flow-box flow-box2" @click="showStepSummary(items,1,index)">
                 <dt
                   :title="items.name"
-                  :style="{borderColor:stepStatusColor[items.status],color:stepStatusFontColor[items.status],background:items.type == 1?'rgba(88, 166, 240, 0.28)': items.type == 2 ? 'rgba(120, 187, 97, 0.27)': '#fff'}"
+                  :style="{borderColor:stepStatusColor[items.status],color:stepStatusFontColor[items.status],background:stepStatusBColor[items.status]}"
                 >
-                  <i>{{  index + 1  }}</i>
+                  <i>{{ index + 1 }}</i>
                   {{ items.name }}
                 </dt>
                 <dd>
@@ -557,7 +592,7 @@
               <div
                 class="flow-content"
                 v-if="items.summarys.length"
-                :style="{display:moneyStepSummary == items.order ? 'block': 'none'}"
+                :style="{display:moneyStepSummary == index + 1 ? 'block': 'none'}"
               >
                 <span class="flow-content-arrow"></span>
                 <a-row v-for="(sum,sumIndex) in items.summarys" :key="sumIndex">
@@ -625,7 +660,7 @@
           />
         </div>
       </a-table>
-      <div style="font-size:10px;color:#5873c9;cursor:pointer" @click="addPlans">
+      <div style="font-size:10px;color:#78bb60;cursor:pointer" @click="addPlans">
         <a-icon type="plus"></a-icon>添加计划项
       </div>
     </div>
@@ -651,6 +686,7 @@
       :inivisible="visibled"
       :type="employeeType"
       :isOne="isOne"
+      :type2="employeeType2"
       @changeStatus="changeEMStatus"
     />
     <stepsDialog
@@ -671,6 +707,12 @@
         <a-col :span="5" style="text-align: right">暂停原因：</a-col>
         <a-col :span="17">
           <a-textarea rows="5" placeholder="暂停原因" v-model="stopReason"/>
+        </a-col>
+        <a-col :span="24" style="margin-top:10px">
+          <a-col :span="5" style="text-align: right;line-height:30px">审核人：</a-col>
+          <a-col :span="17">
+            <a-input :value="stopPrincipal.name" readonly="readonly" @click="showEmployee(2)"/>
+          </a-col>
         </a-col>
       </a-row>
       <template slot="footer">
@@ -737,7 +779,9 @@ import FinishDialog from '@/components/dialog/project/finishDialog'
 
 import { mapState, mapMutations } from 'vuex'
 import { db } from '@/utils/db'
-import { countWorkDay, getDuration,countEndDate } from '@/components/_util/StringUtil'
+import { countWorkDay, getDuration, countEndDate } from '@/components/_util/StringUtil'
+
+import uuid from 'uuid'
 
 const columns = [
   {
@@ -805,6 +849,7 @@ export default {
       columns,
       startDate: '', //项目开始时间
       endDate: '', //项目截止时间
+      showEndTime: '', //显示的项目截止时间
 
       nowStatus: '',
       statusListShow: false,
@@ -812,18 +857,19 @@ export default {
       nowStatusBorderColor: '', //项目状态边框颜色
       nowStatusIcon: '', //项目状态图标
 
-      nowUrgent:'',
-      urgentListShow:false,
-      nowUrgentColor:'',
-      nowUrgentBorderColor:'',
-      nowUrgentIcon:'',
+      nowUrgent: '',
+      urgentListShow: false,
+      nowUrgentColor: '',
+      nowUrgentBorderColor: '',
+      nowUrgentIcon: '',
 
       emTitle: '', //人员弹框标题
       visibled: false, //人员弹框是否显示
       isOne: true, //人员是否多选
       employeeType: 1, //部门人员弹框类型
+      employeeType2: 0, //人员类别
       type: 1, //结果类型
-      countDay:0, //天数
+      countDay: 0, //天数
 
       stepsVisibled: false, //编辑节点弹框是否显示
       stepStatus: {
@@ -835,17 +881,24 @@ export default {
       },
       stepStatusColor: {
         //节点边框颜色
-        0: '#aaa',
+        0: '#c8c6c6',
         1: '#78bb61',
-        2: '#58a6f0',
-        4: '#f19149'
+        4: '#58a6f0',
+        2: '#f19149'
+      },
+      stepStatusBColor: {
+        //节点边框颜色
+        0: '#aaaaaa26',
+        1: '#78bb614b',
+        4: '#58a6f04b',
+        2: '#f191494b'
       },
       stepStatusFontColor: {
         //节点字体颜色
-        0: '#555',
+        0: '#918e8e',
         1: '#78bb61',
-        2: '#58a6f0',
-        4: '#f19149'
+        4: '#58a6f0',
+        2: '#f19149'
       },
 
       stepSummary: 0, //节点纪要显示
@@ -865,8 +918,8 @@ export default {
 
       principal: {}, //负责人
       steps: [], //项目进展数组
-      moneySteps:[], //财务节点
-      stepType:0, //节点属性
+      moneySteps: [], //财务节点
+      stepType: 0, //节点属性
 
       summarys: [], //项目纪要
       summarysData: {}, //处理过的数据
@@ -877,15 +930,21 @@ export default {
       move: -1, //移入移出节点
       projectName: '',
       settlement: '2',
-      totalDate: 0,
-      hasDate: 0,
-      pauses: [],
+      surplusDate: 0, //剩余工期
+      planDate: 0, //计划工期
+      stopDate: 0, //暂停天数
+      totalDate: 0, //实际工期
+      hasDate: 0, //有效工期
+      pauses: [], //暂停时间数组
+      stopTasks: [], //暂停任务
+      stopPrincipal: { name: '郑东鸣', id: 'ff395128-ff73-425e-9b47-bab8f17f3d0b' }, //项目暂停负责人
+      isBoss: false, //是否为公司领导人
       urgentArray: [
         {
           name: '正常',
           value: 0,
           background: '#78bb61',
-          borderColor: '#96ca85',
+          borderColor: '#96ca84',
           icon: 'clock-circle'
         },
         {
@@ -916,14 +975,15 @@ export default {
           name: '进行中',
           value: 1,
           background: '#78bb61',
-          borderColor: '#96ca85',
+          borderColor: '#96ca84',
           icon: 'clock-circle'
         },
         {
           name: '已完成',
           value: 2,
-          background: '#5d9cec',
-          borderColor: '#8bb8f1',
+          background: '#f19149',
+          borderColor: '#f5ae78',
+          
           icon: 'check-circle'
         },
         {
@@ -936,8 +996,8 @@ export default {
         {
           name: '暂停',
           value: 4,
-          background: '#f19149',
-          borderColor: '#f5ae78',
+          background: '#5d9cec',
+          borderColor: '#8bb8f1',
           icon: 'pause-circle'
         },
         {
@@ -970,7 +1030,15 @@ export default {
   created() {
     this.loadData(this.projectId)
     console.log(moment().format(), this.startDate, this.endDate, 'startDate')
-    
+
+    let roleName = this.userInfo.roles.filter(e => e.role.name == '公司领导')
+    // console.log(roleName)
+    if (roleName.length) {
+      this.isBoss = true
+    } else {
+      this.isBoss = false
+    }
+
     // console.log(moment("2019-01-28T10:35:48.791Z").format('YYYY-MM-DD'))
   },
   mounted() {
@@ -1055,6 +1123,12 @@ export default {
                   }
                   createdAt
                 }
+
+                 tasks(where:{type:{_eq:5},status:{_eq:4}}){
+                    id
+                    name
+                    status
+                  }
                 
               }
               
@@ -1080,45 +1154,16 @@ export default {
 
       this.pauses = data[0].pauses
 
-      this.settlementTime()
+      this.stopTasks = data[0].tasks
 
-      console.log(this.startDate ? 1 : 2, this.endDate ? 3 : 4)
+      // console.log(this.startDate ? 1 : 2, this.endDate ? 3 : 4)
       this.steps = data[0].steps.filter(ele => ele.property == 0)
       this.moneySteps = data[0].steps.filter(ele => ele.property == 1)
       this.summarys = data[0].summarys
       this.plans = data[0].plans
       this.status = data[0].status
 
-
-      if(this.status == 0 ){
-        if(this.startDate) {
-          if(this.startDate < this.moment().format()){
-            this.changeProjectStatus(1, '调整项目状态为进行中')
-            // console.log(this.startDate, this.moment().format(),'进行中---------------')
-          }
-        }
-      }
-
-
-      if (this.status == 1) {
-        //进行中
-        if (this.endDate) {
-          if (this.totalDate < this.hasDate) {
-            console.log('延误')
-            // debugger
-            this.changeProjectStatus(6, '调整项目状态为延误')
-          }
-        }
-      }
-
-      if (this.status == 6) {
-        if (this.endDate) {
-          if (this.totalDate > this.hasDate) {
-            // console.log('进行中')
-            this.changeProjectStatus(1, '调整项目状态为进行中')
-          }
-        }
-      }
+      this.settlementTime()
 
       var statusData = this.statusArr.filter(ele => ele.value == this.status)
       this.nowStatus = statusData[0].name
@@ -1133,7 +1178,6 @@ export default {
       this.nowUrgentBorderColor = urgentData[0].borderColor
       this.nowUrgentIcon = urgentData[0].icon
 
-
       this.summarysData = {}
       this.summarys.forEach(_sum => {
         var time = moment(_sum.createdAt).format('YYYY-MM-DD')
@@ -1145,34 +1189,72 @@ export default {
           this.summarysData[time] = [obj]
         }
       })
+
+      if (this.stopTasks.length) {
+        var statusData = this.statusArr.filter(ele => ele.value == 0)
+        this.nowStatus = '暂停审核中'
+        this.nowStatusColor = statusData[0].background
+        this.nowStatusBorderColor = statusData[0].borderColor
+        this.nowStatusIcon = statusData[0].icon
+        return
+      }
+
+      if (this.status == 0) {
+        if (this.startDate) {
+          if (this.startDate < this.moment().format()) {
+            this.changeProjectStatus(1, '调整项目状态为进行中')
+            // console.log(this.startDate, this.moment().format(),'进行中---------------')
+          }
+        }
+      }
+
+      if (this.status == 1) {
+        //进行中
+        if (this.endDate) {
+          if (this.planDate < this.hasDate) {
+            console.log('延误')
+            // debugger
+            this.changeProjectStatus(6, '调整项目状态为延误')
+          }
+        }
+      }
+
+      if (this.status == 6) {
+        if (this.endDate) {
+          if (this.planDate > this.hasDate) {
+            // console.log('进行中')
+            this.changeProjectStatus(1, '调整项目状态为进行中')
+          }
+        }
+      }
       console.log(this.summarysData)
     },
     //页面点击事件/项目状态改变/节点纪要
     handleDocumentClick(e) {
       console.log('document click')
       let summary = 0
-      if(this.stepType == 0){
+      if (this.stepType == 0) {
         summary = this.stepSummary
-      }else {
+      } else {
         summary = this.moneyStepSummary
       }
       if (summary > 0) {
-        if(this.stepType == 0){
+        if (this.stepType == 0) {
           if (!document.getElementsByClassName('flow-box1')[this.stepSummary - 1].contains(e.target)) {
             this.stepSummary = 0
           }
-        }else {
+        } else {
           if (!document.getElementsByClassName('flow-box2')[this.moneyStepSummary - 1].contains(e.target)) {
             this.moneyStepSummary = 0
           }
         }
-        
       }
 
+      console.log(this.stepSummary, this.moneyStepSummary)
       if (this.$refs.statusDiv) {
         this.statusListShow = false
       }
-      if(this.$refs.urgentDiv){
+      if (this.$refs.urgentDiv) {
         this.urgentListShow = false
       }
     },
@@ -1180,20 +1262,26 @@ export default {
     //显示项目状态列表
     showStatusList(type) {
       // console.log(this.$auth)
+
+      if (this.stopTasks.length && type == 2) {
+        this.$message.warning('暂停申请中，等候审批')
+        return
+      }
+
       if (!this.$auth('edit-project-status')) {
         return
       }
-      if(type == 1){
+
+      if (type == 1) {
         this.urgentListShow = true
-      }else {
+      } else {
         this.statusListShow = true
-      } 
-      
+      }
     },
 
     // 切换项目是否赶工
     async urgentListClick(record) {
-      console.log(record,this.projectId)
+      console.log(record, this.projectId)
       var mutationString = `mutation {
         update_Project(where:{id:{_eq:"${this.projectId}"}},_set:{urgentStatus:${record.value}}){returning {id}}
       }`
@@ -1201,9 +1289,6 @@ export default {
       let res = await this.dbConn.mutation(mutationString)
 
       this.loadData(this.projectId)
-
-
-
     },
 
     //切换项目状态
@@ -1254,56 +1339,103 @@ export default {
       // this.nowStatusIcon = record.icon
       // this.statusListShow = false
     },
+    //修改项目状态
     changeProjectStatus(status, content) {
       var _this = this
+      let mutationString = ''
+      let name = `【暂停申请】${_this.projectName}`
 
-      let projectPause = ''
-      let updatePauses = ''
-      let pauses = this.pauses.filter(ele => ele.endTime == null)
-      let endDate = this.moment().format()
-      if (status != '') {
-        pauses.forEach((ele, index) => {
-          let _endDate = this.moment(endDate).format('YYYY-MM-DD hh:mm:ss')
-          let _startDate = this.moment(ele.startTime).format('YYYY-MM-DD hh:mm:ss')
-          let duration = this.getDuration(_endDate, _startDate)
-          updatePauses += `update_ProjectPause_${index}:update_ProjectPause(where:{id:{_eq:"${ele.id}"}},_set:{
-            endTime:"${endDate}",
-            duration:${parseInt(duration)}
-          }){returning{id}}`
-        })
-        if (status == 4) {
-          //暂停
-          projectPause = `
-            insert_ProjectPause(objects:[{
-              startTime:"${moment().format()}" 
-              createdBy_id:"${_this.userInfo.id}"  
-              project_id:"${_this.projectId}"  
-              reason:"${this.stopReason}" 
-            }]){returning{id}}`
+      if (status == 4 && !_this.isBoss) {
+        //暂停生成暂停审核任务
+        let newTaskId = uuid()
+        var notificationString = `insert_Notification(objects:[{
+          recipients:{
+            data:{
+              recipient_id:"${_this.stopPrincipal.id}"
+            }
+          },
+          createdBy_id:"${_this.userInfo.id}",
+          type:2,
+          status:0,
+          task_id:"${newTaskId}"
+          project_id:"${_this.projectId}"
+          name:"【${_this.userInfo.name}】提交了【${_this.projectName}】项目中的${name}任务，需您审核"
+        }]){returning{id}}`
+
+        var summaryString = `
+          insert_Summary(objects:[{
+            project_id:"${_this.projectId}",
+            createdBy_id:"${_this.userInfo.id}",
+            content:"【${_this.userInfo.name}】提交项目任务：${name}，让【${_this.stopPrincipal.name}】进行审核",
+          }]){returning{id}}
+        `
+        mutationString = `mutation {
+          insert_Task(objects:[{
+            id:"${newTaskId}"
+            project_id:"${_this.projectId}"
+            type: 5
+            handler_id:"${_this.stopPrincipal.id}"
+            name: "${name}"
+            step: 0,
+            remark: "${_this.stopReason}"
+            status: 4
+            reviewResult: "-1"
+            createdBy_id:"${_this.userInfo.id}"
+          }]){returning{id}}
+          ${notificationString}
+          ${summaryString}
+        }`
+        console.log(mutationString)
+      } else {
+        let projectPause = ''
+        let updatePauses = ''
+        let pauses = this.pauses.filter(ele => ele.endTime == null)
+        let endDate = this.moment().format()
+        if (status != '') {
+          pauses.forEach((ele, index) => {
+            let _endDate = this.moment(endDate).format('YYYY-MM-DD HH:mm:ss')
+            let _startDate = this.moment(ele.startTime).format('YYYY-MM-DD HH:mm:ss')
+            let duration = this.getDuration(_endDate, _startDate)
+            updatePauses += `update_ProjectPause_${index}:update_ProjectPause(where:{id:{_eq:"${ele.id}"}},_set:{
+              endTime:"${endDate}",
+              duration:${Math.abs(parseInt(duration))}
+            }){returning{id}}`
+          })
+          if (status == 4) {
+            //暂停
+            projectPause = `
+              insert_ProjectPause(objects:[{
+                startTime:"${moment().format()}" 
+                createdBy_id:"${_this.userInfo.id}"  
+                project_id:"${_this.projectId}"  
+                reason:"${this.stopReason}" 
+              }]){returning{id}}`
+          }
         }
+
+        mutationString = `
+          mutation{
+            update_Project(where:{id:{_eq:"${_this.projectId}"}},_set:{
+              status:${status},
+            }){
+              returning {
+                id
+                status
+              }
+            }
+            insert_Summary(objects:[
+              {project_id:"${_this.projectId}",content:"${content}",createdBy_id:"${_this.userInfo.id}"}
+            ]){
+              returning{
+                id
+              }
+            }
+            ${projectPause}
+            ${updatePauses}
+          }
+        `
       }
 
-      let mutationString = `
-        mutation{
-          update_Project(where:{id:{_eq:"${_this.projectId}"}},_set:{
-            status:${status},
-          }){
-            returning {
-              id
-              status
-            }
-          }
-          insert_Summary(objects:[
-            {project_id:"${_this.projectId}",content:"${content}",createdBy_id:"${_this.userInfo.id}"}
-          ]){
-            returning{
-              id
-            }
-          }
-          ${projectPause}
-          ${updatePauses}
-        }
-      `
       // console.log(mutationString)
       // return
       this.$apollo
@@ -1333,12 +1465,23 @@ export default {
         this.principal.name = obj.data[0].title
 
         this.updatePrincipal()
+      } else if (this.type == 2 && obj.data.length) {
+        console.log(obj.data[0].key)
+        this.stopPrincipal.id = obj.data[0].key
+        this.stopPrincipal.name = obj.data[0].title
       }
     },
     //人员弹框显示
     showEmployee(type) {
-      this.visibled = true
       this.type = type
+      if (type == 1) {
+        this.employeeType2 = 0
+      } else {
+        //暂停负责人不修改
+        return
+        // this.employeeType2 = 3
+      }
+      this.visibled = true
     },
     //修改项目开始时间
     projectStartDate(date, dateString) {
@@ -1412,34 +1555,95 @@ export default {
 
     //计算项目时间
     settlementTime() {
-      this.totalDate = 0
-      this.hasDate = 0
+      // this.totalDate = 0
+      // this.hasDate = 0
+      this.surplusDate = 0 //剩余工期
+      this.planDate = 0 //计划工期
+      this.stopDate = 0 //暂停天数
+      this.totalDate = 0 //实际工期
+      this.hasDate = 0 //有效工期
+      this.showEndTime = this.endDate
+
+      // if()
 
       let pausesDuration = 0
+      let otherPausesDuration = 0
 
       this.pauses.forEach(ele => {
-        pausesDuration += ele.duration
-      })
-
-      let otherDate = Math.floor(pausesDuration/1440) //暂停时间
-
-      if (this.startDate) {
-        // console.log(countEndDate(this.moment(this.startDate).format('YYYY-MM-DD'),5,1),'startDateendDatedate')
-        if (this.endDate) {
-          console.log(this.endDate, 'endDate')
-          this.totalDate = this.countWorkDay(
-            this.moment(this.startDate).format('YYYY-MM-DD'),
-            this.moment(this.endDate).format('YYYY-MM-DD'),
-            this.settlement
-          )
-          this.countDay = this.totalDate
-          this.totalDate += otherDate
+        if (ele.endTime) {
+          pausesDuration += ele.duration
+          otherPausesDuration = pausesDuration
+        } else {
+          let _endDate = this.moment().format('YYYY-MM-DD HH:mm:ss')
+          let _startDate = this.moment(ele.startTime).format('YYYY-MM-DD HH:mm:ss')
+          otherPausesDuration = otherPausesDuration + this.getDuration(_endDate, _startDate)
         }
-        this.hasDate = this.countWorkDay(
-          this.moment(this.startDate).format('YYYY-MM-DD'),
-          this.moment().format('YYYY-MM-DD'),
-          this.settlement
-        )
+      })
+      console.log(pausesDuration, otherPausesDuration)
+
+      // let otherDate = Math.ceil(pausesDuration/1440) //暂停时间
+      // this.stopDate = otherDate
+      // console.log(this.pauses,this.startDate,this.endDate)
+      // console.log(this.moment(this.startDate).format("YYYY-MM-DD HH:mm:ss"))
+      // console.log(this.moment(this.endDate).format("YYYY-MM-DD HH:mm:ss"))
+      // console.log(this.moment().format("YYYY-MM-DD HH:mm:ss"))
+      console.log(this.endDate)
+      if (this.startDate) {
+        let startDate = this.moment(this.startDate).format('YYYY-MM-DD HH:mm:ss')
+        let nowDate = this.moment().format('YYYY-MM-DD HH:mm:ss')
+
+        if (this.status == 2) {
+          let finishStep = this.steps.filter(e => e.type == 1)
+          let finishTime = ''
+          if (finishStep.length) {
+            finishTime = finishStep[0].status == 2 ? finishStep[0].finishTime : ''
+          }
+          if (finishTime) {
+            nowDate = this.moment(finishTime).format('YYYY-MM-DD HH:mm:ss')
+          }
+        }
+
+        if (this.endDate) {
+          let endDate = this.moment(this.endDate).format('YYYY-MM-DD HH:mm:ss')
+          if (endDate > nowDate && [1, 2, 4].indexOf(this.status) > -1) {
+            //未过期项目
+            if (this.status == 1) {
+              this.stopDate = Math.ceil(otherPausesDuration / 1440)
+            } else {
+              this.stopDate = Math.ceil(pausesDuration / 1440)
+            }
+
+            this.hasDate = this.countWorkDay(
+              this.moment(this.startDate).format('YYYY-MM-DD'),
+              this.moment().format('YYYY-MM-DD'),
+              this.settlement
+            )
+            // console.log(this.moment(this.startDate).format('YYYY-MM-DD'),this.moment().format("YYYY-MM-DD"),this.hasDate)
+            this.hasDate = this.hasDate - this.stopDate
+            this.planDate = this.countWorkDay(
+              this.moment(this.startDate).format('YYYY-MM-DD'),
+              this.moment(this.endDate).format('YYYY-MM-DD'),
+              this.settlement
+            )
+            this.surplusDate = this.planDate - this.hasDate
+            this.totalDate = this.hasDate + this.stopDate
+            let showEndTime = this.moment(this.endDate).add(this.stopDate, 'days')
+            this.showEndTime = showEndTime
+            this.countDay = this.planDate
+            // console.log()
+          } else if (endDate < nowDate) {
+            this.hasDate = this.countWorkDay(
+              this.moment(this.startDate).format('YYYY-MM-DD'),
+              this.moment(this.endDate).format('YYYY-MM-DD'),
+              this.settlement
+            )
+            this.planDate = this.hasDate
+            this.surplusDate = 0
+            this.stopDate = 0
+            this.totalDate = this.hasDate
+            this.countDay = this.planDate
+          }
+        }
       }
     },
 
@@ -1473,18 +1677,18 @@ export default {
     //显示节点编辑弹框
     showStepsDialog(type) {
       this.stepType = type
-      // 
+      //
       this.stepsVisibled = true
     },
     //节点编辑关闭后
     stepsChange(obj) {
       this.stepsVisibled = obj.visibled
-      debugger
+      // debugger
       console.log(this.stepType)
       if (obj.steps) {
-        if(this.stepType == 1){
+        if (this.stepType == 1) {
           this.moneySteps = obj.steps
-        }else {
+        } else {
           this.steps = obj.steps
         }
         // console.log(obj.steps, 'ddfdf')
@@ -1515,6 +1719,7 @@ export default {
             type:3,
             name: "【${_this.projectName}】项目被【${_this.userInfo.name}】委托给您负责。",
             status: 0,
+            project_id:"${_this.projectId}",
             recipients:{
               data:{
                 recipient_id:"${_this.principal.id}"
@@ -1550,23 +1755,29 @@ export default {
     },
 
     //显示节点纪要
-    showStepSummary(record,type) {
+    showStepSummary(record, type, index) {
       this.stepSummary = record.order
       this.stepType = type
-      if(type == 0){
-        this.stepSummary = record.order
+      if (type == 0) {
+        this.stepSummary = index + 1
         this.moneyStepSummary = 0
-      }else {
-        this.moneyStepSummary = record.order
+      } else {
+        this.moneyStepSummary = index + 1
         this.stepSummary = 0
       }
       console.log(this.stepSummary, 'showStepSummary')
     },
 
     //节点状态变更
-    stepStatusChange(record, status,type) {
+    stepStatusChange(record, status, type) {
       this.stepId = record.id
       this.stepType = type
+
+      if (this.stopTasks.length) {
+        this.$message.warning('暂停申请中，等候审批')
+        return
+      }
+
       // console.log(record,this.steps)
 
       // console.log(record,this.nextStepId)
@@ -1585,7 +1796,7 @@ export default {
           //   },
           //   onCancel() {}
           // })
-          if(this.stepType == 0){
+          if (this.stepType == 0) {
             _this.nextStepId = (_this.steps.filter(ele => ele.order == record.order + 1 && ele.status == 0)[0] || []).id
           }
           _this.statusFinish()
@@ -1603,11 +1814,12 @@ export default {
       var summaryContent = ''
       if (this.stepId) {
         console.log(this.steps)
-        if(this.stepType == 0){
+        if (this.stepType == 0) {
           var finishStep = this.steps.filter(ele => ele.type == 1)
           var nowStep = this.steps.filter(ele => ele.id == this.stepId)
           var startStep = this.steps.filter(ele => ele.type == 2)
           if (finishStep.length) {
+            // debugger
             if (
               ((finishStep[0] || {}).order || 0) > nowStep[0].order &&
               ((startStep[0] || {}).order || 0) < nowStep[0].order
@@ -1620,9 +1832,10 @@ export default {
             projectStatus = ''
           }
           summaryContent = `调整项目状态为暂停，暂停原因：${this.stopReason}`
-
         }
         var stepSummaryContent = '变更状态【暂停中】'
+        // debugger
+        // return
         _this.updateStatus(4, stepSummaryContent, this.stepId, summaryContent, projectStatus)
       } else {
         var summaryContent = `调整项目状态为暂停，暂停原因：${this.stopReason}`
@@ -1640,9 +1853,9 @@ export default {
       var stepSummaryContent = '变更状态【已完成】'
       var summaryContent = '调整项目状态为已完成'
       var nowStep = []
-      if(this.stepType == 0){
+      if (this.stepType == 0) {
         nowStep = this.steps.filter(ele => ele.id == this.stepId)
-      }else {
+      } else {
         nowStep = this.moneySteps.filter(ele => ele.id == this.stepId)
       }
 
@@ -1650,10 +1863,14 @@ export default {
         //完成节点
         // this.changeProjectStatus(record.value, content)
         _this.updateStatus(2, stepSummaryContent, this.stepId, summaryContent, 2)
-        if(this.moneySteps.length){
+        // debugger
+        if (this.nextStepId) {
+          _this.updateStatus(1, '变更状态为进行中', this.nextStepId)
+        }
+
+        if (this.moneySteps.length) {
           _this.updateStatus(1, '变更状态为进行中', this.moneySteps[0].id)
         }
-       
       } else if (nowStep[0].type == 2) {
         //开始节点
         _this.updateStatus(2, stepSummaryContent, this.stepId)
@@ -1662,11 +1879,10 @@ export default {
         _this.updateStatus(1, stepSummaryContent, this.nextStepId, summaryContent, 1)
       } else {
         _this.updateStatus(2, stepSummaryContent, this.stepId)
-      }
-
-      if (this.nextStepId) {
-        var nextStepSummaryContent = '变更状态【进行中】'
-        _this.updateStatus(1, nextStepSummaryContent, this.nextStepId)
+        if (this.nextStepId) {
+          var nextStepSummaryContent = '变更状态【进行中】'
+          _this.updateStatus(1, nextStepSummaryContent, this.nextStepId)
+        }
       }
     },
     //变更状态为进行中
@@ -1674,10 +1890,11 @@ export default {
       var _this = this
       var projectStatus = ''
       var summaryContent = ''
-      if(this.stepType == 0){
+      var nowStep = this.steps.filter(ele => ele.id == this.stepId)
+      if (this.stepType == 0) {
         var finishStep = this.steps.filter(ele => ele.type == 1)
         var startStep = this.steps.filter(ele => ele.type == 2)
-        var nowStep = this.steps.filter(ele => ele.id == this.stepId)
+
         if (finishStep.length) {
           if (
             ((finishStep[0] || {}).order || 0) > nowStep[0].order &&
@@ -1694,6 +1911,10 @@ export default {
       }
       var stepSummaryContent = '变更状态【进行中】'
       _this.updateStatus(1, stepSummaryContent, this.stepId, summaryContent, projectStatus)
+      // debugger
+      if (nowStep[0].type == 2 && summaryContent != '') {
+        _this.projectStartDate(this.moment())
+      }
     },
 
     //更新项目节点及项目状态
@@ -1702,76 +1923,125 @@ export default {
 
       var mutationString = ''
       if (projectStatus) {
-        let projectPause = ''
-        let updatePauses = ''
-        let pauses = this.pauses.filter(ele => ele.endTime == null)
-        let endDate = this.moment().format()
-        if (status != '') {
-          pauses.forEach((ele, index) => {
-            let _endDate = this.moment(endDate).format('YYYY-MM-DD hh:mm:ss')
-            let _startDate = this.moment(ele.startTime).format('YYYY-MM-DD hh:mm:ss')
-            let duration = this.getDuration(_endDate, _startDate)
-            updatePauses += `update_ProjectPause_${index}:update_ProjectPause(where:{id:{_eq:"${ele.id}"}},_set:{
-              endTime:"${endDate}",
-              duration:${parseInt(duration)}
-            }){returning{id}}`
-          })
-          if (status == 4) {
-            //暂停
-            projectPause = `
-              insert_ProjectPause(objects:[{
-                startTime:"${moment().format()}" 
-                createdBy_id:"${_this.userInfo.id}"  
-                project_id:"${_this.projectId}"  
-                reason:"${this.stopReason}" 
-              }]){returning{id}}`
+        let newTaskId = uuid()
+
+        if (projectStatus == 4 && !_this.isBoss) {
+          var nowStep = this.steps.filter(ele => ele.id == stepId)
+          let name = `【暂停申请】${_this.projectName}-${nowStep[0].name}`
+          var notificationString = `insert_Notification(objects:[{
+              recipients:{
+                data:{
+                  recipient_id:"${_this.stopPrincipal.id}"
+                }
+              },
+              createdBy_id:"${_this.userInfo.id}",
+              type:2,
+              status:0,
+              task_id:"${newTaskId}"
+              project_id:"${_this.projectId}"
+              name:"【${_this.userInfo.name}】提交了【${_this.projectName}】项目中的【${name}】任务，需您审核"
+            }]){returning{id}}`
+
+          var summaryString = `
+              insert_Summary(objects:[{
+                project_id:"${_this.projectId}",
+                createdBy_id:"${_this.userInfo.id}",
+                content:"【${_this.userInfo.name}】提交项目任务：【【${nowStep[0].name}】项目暂停】，让【${
+            _this.stopPrincipal.name
+          }】进行审核",
+              }]){returning{id}}
+            `
+          mutationString = `
+              insert_Task(objects:[{
+                id:"${newTaskId}"
+                project_id:"${_this.projectId}"
+                projectStep_id:"${stepId}"
+                type: 5
+                handler_id:"${_this.stopPrincipal.id}"
+                name: "${name}"
+                step: 0,
+                remark: "${_this.stopReason}"
+                status: 4
+                reviewResult: "-1"
+                createdBy_id:"${_this.userInfo.id}"
+              }]){returning{id}}
+              ${notificationString}
+              ${summaryString}
+            `
+          console.log(mutationString)
+          // return
+        } else {
+          let projectPause = ''
+          let updatePauses = ''
+          let pauses = this.pauses.filter(ele => ele.endTime == null)
+          let endDate = this.moment().format()
+          if (status != '') {
+            pauses.forEach((ele, index) => {
+              let _endDate = this.moment(endDate).format('YYYY-MM-DD HH:mm:ss')
+              let _startDate = this.moment(ele.startTime).format('YYYY-MM-DD HH:mm:ss')
+              let duration = this.getDuration(_endDate, _startDate)
+              updatePauses += `update_ProjectPause_${index}:update_ProjectPause(where:{id:{_eq:"${ele.id}"}},_set:{
+                endTime:"${endDate}",
+                duration:${parseInt(duration)}
+              }){returning{id}}`
+            })
+            if (status == 4) {
+              //暂停
+              projectPause = `
+                insert_ProjectPause(objects:[{
+                  startTime:"${moment().format()}" 
+                  createdBy_id:"${_this.userInfo.id}"  
+                  project_id:"${_this.projectId}"  
+                  reason:"${this.stopReason}" 
+                }]){returning{id}}`
+            }
           }
-        }
-        mutationString = `
-          ${
-            projectStatus == status
-              ? `update_Project(where:{id:{_eq:"${this.projectId}"}},_set:{
-                  status:${status},
+          mutationString = `
+            ${
+              projectStatus == status
+                ? `update_Project(where:{id:{_eq:"${this.projectId}"}},_set:{
+                    status:${status},
+                }){
+                  returning{
+                    id
+                  }
+                }
+                `
+                : ''
+            }
+            ${
+              stepId
+                ? `update_Step(where:{id:{_eq:"${stepId}"}},_set:{
+                status: ${status},
+                ${status == 2 ? `finishTime:"${moment().format()}"` : ''}
               }){
                 returning{
                   id
                 }
-              }
-              `
-              : ''
-          }
-          ${
-            stepId
-              ? `update_Step(where:{id:{_eq:"${stepId}"}},_set:{
-              status: ${status},
-              ${status == 2 ? `finishTime:"${moment().format()}"` : ''}
-            }){
+              }`
+                : ''
+            }
+            insert_Summary(objects:
+              [
+                ${
+                  stepId
+                    ? `{step_id:"${stepId}",content:"${stepSummaryContent}",createdBy_id:"${_this.userInfo.id}"},`
+                    : ''
+                }
+                ${
+                  projectStatus == status
+                    ? `{project_id:"${this.projectId}"content:"${summaryContent}",createdBy_id:"${_this.userInfo.id}"},`
+                    : ''
+                }
+              ]){
               returning{
                 id
               }
-            }`
-              : ''
-          }
-          insert_Summary(objects:
-            [
-              ${
-                stepId
-                  ? `{step_id:"${stepId}",content:"${stepSummaryContent}",createdBy_id:"${_this.userInfo.id}"},`
-                  : ''
-              }
-              ${
-                projectStatus == status
-                  ? `{project_id:"${this.projectId}"content:"${summaryContent}",createdBy_id:"${_this.userInfo.id}"},`
-                  : ''
-              }
-            ]){
-            returning{
-              id
             }
-          }
-          ${projectPause}
-          ${updatePauses}
-        `
+            ${projectPause}
+            ${updatePauses}
+          `
+        }
       } else {
         mutationString = `
           ${
@@ -1876,7 +2146,7 @@ export default {
       this.statusDelayVisibled = false
     },
     delayDateChange(date) {
-      this.delayDate = moment(date).format('YYYY-MM-DD hh:mm:ss')
+      this.delayDate = moment(date).format('YYYY-MM-DD HH:mm:ss')
       console.log(this.delayDate, 'changeDelayDate')
     },
 
@@ -1914,14 +2184,13 @@ export default {
       return moment(value).format(formatString)
     },
     //天数改变
-    countDayChange(e){
-      if(this.startDate){
-        let endDate = this.countEndDate(this.moment(this.startDate).format('YYYY-MM-DD'),e - 1,this.settlement)
+    countDayChange(e) {
+      if (this.startDate) {
+        let endDate = this.countEndDate(this.moment(this.startDate).format('YYYY-MM-DD'), e - 1, this.settlement)
         this.projectEndDate(this.moment(endDate))
         console.log(endDate)
       }
       // console.log(e,this.countEndDate(this.moment(this.startDate).format('YYYY-MM-DD'),e,this.settlement))
-      
     }
   }
 }
@@ -1936,7 +2205,7 @@ export default {
 }
 div.project-complete {
   /* background-color: #5d9cec; */
-  background: #aaaaaa
+  background: #aaaaaa;
 }
 .select-box {
   padding: 5px;
@@ -1944,7 +2213,7 @@ div.project-complete {
 }
 div.project-complete .select-content {
   /* border-color: #8bb8f1; */
-  border-color:#aaaaaa
+  border-color: #aaaaaa;
 }
 .select-content {
   height: 43px;
@@ -1976,12 +2245,12 @@ div.project-complete .select-content {
 
 .select-list {
   position: absolute;
-  width: 162px;
+  width: 100%;
   background: inherit;
   z-index: 2;
 }
 .font-blue {
-  color: #5873c9 !important;
+  color: #78bb60 !important;
 }
 .font-red {
   color: #fa8564 !important;

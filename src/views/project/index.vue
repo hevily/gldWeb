@@ -24,6 +24,7 @@
 import ProjectList from '@/components/project/ProjectList'
 import ProjectDetail from '@/components/project/ProjectDetail'
 import { createECDH } from 'crypto'
+import { mapMutations } from 'vuex'
 
 export default {
   name: 'Analysis',
@@ -51,12 +52,14 @@ export default {
         },
         tapType: this.$route.query.type
       })
+      this.set_project({ id: this.$route.query.projectId, name: this.$route.query.name })
     }
     setTimeout(() => {
       this.loading = !this.loading
     }, 1000)
   },
   methods: {
+    ...mapMutations(['set_project']),
     replaceModule(param) {
       // debugger
       this.moduleType = param.type

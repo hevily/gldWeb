@@ -74,6 +74,7 @@ const user = {
               major
               createdAt
               updatedAt
+              filterNotificationType
               department {
                 id
                 name
@@ -81,6 +82,7 @@ const user = {
               }
               roles {
                 role {
+                  name
                   authorizations {
                     authorization {
                       key

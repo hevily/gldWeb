@@ -25,9 +25,9 @@
               @select="onSelect"
               
             >
-              <a-icon slot="home" type="home" style="color:#5873c9;font-weight: bolder;"/>
-              <a-icon slot="team" type="team" style="color:#5873c9;font-weight: bolder;"/>
-              <a-icon slot="male" type="user" style="color:#5873c9"/>
+              <a-icon slot="home" type="home" style="color:#78bb60;font-weight: bolder;"/>
+              <a-icon slot="team" type="team" style="color:#78bb60;font-weight: bolder;"/>
+              <a-icon slot="male" type="user" style="color:#78bb60"/>
               <a-icon slot="female" type="user" style="color:#fa8564"/>
             </a-tree>
           </div>
@@ -110,7 +110,7 @@ export default {
     },
     type2: {
       type:Number,
-      default:0,//1专业负责人/2项目成员
+      default:0,//1专业负责人/2项目成员/3公司领导人/4外部
     },
     filterData: {
       type: Array,
@@ -133,9 +133,9 @@ export default {
       defaultExpandedKeys:[],
       treeData:[],
       employeeType:this.type2,
-      filterDatas:this.filterData,
+      filterDatas:["e0efba29-2432-4066-bd37-5d8ca8bd479d"].concat(this.filterData),
       selectedData: this.initSelected,
-      
+      whereString:'',
     }
   },
   created() {
@@ -146,6 +146,13 @@ export default {
 
     getEmployeeData() {
       var that = this
+      if(that.employeeType == 3){
+        this.whereString = `roles:{role:{name:{_eq:"公司领导"}}}`
+      }else if(that.employeeType == 4){
+        this.whereString = `department:{name:{_eq:"外部"}}`
+      }else {
+        this.whereString = ``
+      }
       this.$apollo
         .query({
           query: gql`
@@ -157,10 +164,16 @@ export default {
                   id
                   name
                 }
-                employees {
+                employees(where:{${that.whereString}}) {
                   id
                   name
                   major
+                  roles{
+                    role {
+                      id
+                      name
+                    }
+                  }
                 }
                 parent {
                   id
@@ -237,7 +250,7 @@ export default {
               if(that.employeeType == 1){ //专业负责人
                 _employees = item.employees.filter(ele => ele.major && that.filterDatas.indexOf(ele.id) == -1)
               }else if(that.employeeType == 2){ //项目成员
-                _employees = item.employees.filter(ele => !ele.major && that.filterDatas.indexOf(ele.id) == -1)
+                // _employees = item.employees.filter(ele => !ele.major && that.filterDatas.indexOf(ele.id) == -1)
               }
               _employees.forEach(ele => {
                 var obj = {
@@ -266,7 +279,7 @@ export default {
               if(that.employeeType == 1){ //专业负责人
                 _employees = item.employees.filter(ele => ele.major && that.filterDatas.indexOf(ele.id) == -1)
               }else if(that.employeeType == 2){ //项目成员
-                _employees = item.employees.filter(ele => !ele.major && that.filterDatas.indexOf(ele.id) == -1)
+                // _employees = item.employees.filter(ele => !ele.major && that.filterDatas.indexOf(ele.id) == -1)
               }
               _employees.forEach(ele => {
                 var obj = {
@@ -290,10 +303,12 @@ export default {
     },
     handleOk(e) {
       this.$emit('changeStatus', {visibled:false,data:this.selectedData,isCancel:false})
+      this.selectedData = []
     },
     cancel(e){
       // console.log(chang)
       this.$emit('changeStatus', {visibled:false,data:this.selectedData,isCancel:true})
+      this.selectedData = []
     },
     onSelect(selectedKeys, info) {
       // console.log(selectedKeys, info,'info')
@@ -340,9 +355,12 @@ export default {
   watch: {
     inivisible(newT) {
       // console.log(newT,oldT)
-
+      let _this = this
       if (newT) {
-        this.getEmployeeData()
+        setTimeout(function(){
+          _this.getEmployeeData()
+        },100)
+        // this.selectedData = []
         // this.selectedData = this.initSelected
       }
       this.visibled = newT
@@ -358,6 +376,12 @@ export default {
     },
     type2(newT){
       this.employeeType = newT
+      console.log(newT)
+      // if(newT == 3){
+      //   this.whereString = `roles:{role:{name:{_eq:"公司领导"}}}`
+      // }else {
+      //   this.whereString = ``
+      // }
     },
     filterData(newT){
       this.filterDatas = newT

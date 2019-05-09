@@ -24,7 +24,7 @@
                 <a-input-search
                   :style="{width:'75%'}"
                   v-model="searchValue"
-                  placeholder="项目编号、项目名称、项目负责人、委托人"
+                  placeholder="项目编号、项目名称、项目负责人、备注"
                   @search="onSearch"
                   enterButton="搜索"
                 />
@@ -43,6 +43,7 @@
               :scroll="{ x: 2000 }"
               :customRow="changeRow"
               @change="tableChange"
+              class="project-list-table"
             >
               <!-- <a slot="description" slot-scope="text" href="javascript:;">{{ text }}</a> -->
 
@@ -320,7 +321,7 @@
                 <a-input
                   v-model="record.remark"
                   placeholder="点击输入备注"
-                  style="width:80%;border: none;box-shadow: none;font-size:12px;height: 28px;"
+                  style="width:80%;border: none;box-shadow: none;font-size:12px;height: 19px; padding: 0px 2px;border-radius: 0px;"
                   @blur="projectRemarkChange(record,$event)"
                 />
               </div>
@@ -335,11 +336,11 @@
                     <a-icon type="down-circle" style="font-size:16px;color:#999"/>
                   </a>
                   <a-menu slot="overlay">
-                    <a-menu-item key="3" v-if="$auth('add-child-project')">
+                    <!-- <a-menu-item key="3" v-if="$auth('add-child-project')">
                       <a @click="createChildren">
                         <a-icon type="share-alt"/>创建子项目
                       </a>
-                    </a-menu-item>
+                    </a-menu-item> -->
                     <a-menu-item key="5" v-if="$auth('delete-project')">
                       <a @click="deleteProject(record)"  >
                         <a-icon type="delete"/>删除项目
@@ -395,6 +396,8 @@ var BusinessType = [
   '审核清单控制价',
   '审核工程变更',
   '审核竣工结算',
+  '审核进度款',
+  '项目复审复核',
 
   '编制投资估算',
   '编制设计概算',
@@ -427,10 +430,10 @@ const reverseStatusObject = {
 
 const statusColor = {
   0: '#ccc',
-  1: '#96ca85',
-  2: '#8bb8f1',
+  1: '#78bb60',
+  2: '#f09a5d',
   3: '#e2b241',
-  4: '#f09a5d',
+  4: '#8bb8f1',
   5: '#f09a5d',
   6: '#f09a5d'
 }
@@ -506,9 +509,9 @@ export default {
       statusArray, //项目状态数组
       statusColor, //项目状态颜色
 
-      statusIndeterminate: false, //全选/不选中间值
-      statusCheckAll: true, //项目状态是否全选
-      statusCheckedList: statusArray, //已选择的业务类型
+      statusIndeterminate: true, //全选/不选中间值
+      statusCheckAll: false, //项目状态是否全选
+      statusCheckedList: statusArray.filter(e => e != '已归档'), //已选择的业务类型
       // statusVisibled: false,
 
       finishVisible: false, //归档弹框是否显示
@@ -528,7 +531,7 @@ export default {
       searchValue:'',
       urgentObject:{
         0:{name:'正常',color:'#78bb61'},
-        1:{name:'赶工',color:'#5873c9'},
+        1:{name:'赶工',color:'#78bb60'},
         2:{name:'加急',color:'#ff5738'}
       },
       // 表头项目编号，项目名称，业务类型，负责人，项目类型，送审金额，审定金额，已回款/咨询，截止日期，项目状态，项目进展，项目备注，操作（讨论 归档 核算 创建子项目 删除）
@@ -699,6 +702,9 @@ export default {
             if(record.status == 4){
               value  = record.reason
             }
+            if(record.fStepName){
+              value += '/' + record.fStepName
+            }
             return {
               children:<div title={value} style="max-width:120px;overflow:hidden;text-overflow:ellipsis; white-space: nowrap;">{value}</div>
             }
@@ -796,6 +802,7 @@ export default {
             remark
             stepName
             reason
+            fStepName
             endDate
             isFavorite
             isQuick
@@ -876,6 +883,7 @@ export default {
     onSearch(e) {
       console.log(e)
       this.searchValue = e
+      this.defaultCurrent = 1
       this.beforeFilter()
       this.loadList()
     },
@@ -1055,6 +1063,7 @@ export default {
     BusCheckChange(checkedList) {
       this.BusIndeterminate = !!checkedList.length && checkedList.length < BusinessType.length
       this.BusCheckAll = checkedList.length === BusinessType.length
+      this.BusCheckedList = checkedList
     },
 
     //项目状态全选
@@ -1213,6 +1222,14 @@ export default {
       }
 
       if (this.endDataStart || this.endDataEnd) {
+        endString += `{_and:[`
+        if(this.endDataStart){
+          endString += `{endDate:{_gt:"${this.endDataStart}"}}`
+        }
+        if(this.endDataEnd){
+          endString += `{endDate:{_lt:"${this.endDataEnd}"}}`
+        }
+        endString += `]}`
       }
 
       if(this.statusCheckedList.length){
@@ -1239,7 +1256,7 @@ export default {
 
 
       if(this.searchValue){
-        seaString = `{_or:[{projectNo:{_like:"%${this.searchValue}%"}},{name:{_like:"%${this.searchValue}%"}},{principal:{name:{_like:"%${this.searchValue}%"}}}]}`
+        seaString = `{_or:[{projectNo:{_like:"%${this.searchValue}%"}},{name:{_like:"%${this.searchValue}%"}},{remark:{_like:"%${this.searchValue}%"}},{principal:{name:{_like:"%${this.searchValue}%"}}}]}`
       }else {
         seaString = ''
       }
@@ -1253,6 +1270,7 @@ export default {
         ${defaultString}
         ${authorString}
         ${seaString}
+        ${endString}
       ]`
       console.log(str, defaultString,'striing-------------------------')
       this.whereString = str
@@ -1509,6 +1527,13 @@ export default {
 .projectList .ant-table-bordered .ant-table-tbody > tr > td {
   /* border-right: 1px solid #e8e8e8; */
   font-size: 13px;
+}
+.projectList .ant-table-small > .ant-table-content > .ant-table-scroll > .ant-table-body > table > .ant-table-tbody > tr > td {
+    padding: 8px;
+}
+
+.projectList .project-list-table .ant-table-content{
+  min-height: 250px;
 }
 /* .projectList .leftInput:hover {
 

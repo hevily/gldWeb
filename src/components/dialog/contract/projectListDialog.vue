@@ -10,6 +10,15 @@
       class="projectListDialog"
     >
       <a-row>
+
+        <a-col :span="24" style="margin-bottom:10px;text-align:right">
+          <a-input-search
+            placeholder="项目名称、项目编号、项目负责人"
+            @search="onSearch"
+            style="width:45%"
+            enterButton
+          />
+        </a-col>
         <a-col :span="24">
           <div class="treeDiv">
             <a-table
@@ -23,7 +32,8 @@
             >
               <div slot="projectName" slot-scope="text,record,index">
                 <a
-                  :style="{display:'block',maxWidth:'150px',overflow:'hidden',whiteSpace: 'nowrap',textOverflow: 'ellipsis'}"
+                  :style="{display:'block',maxWidth:'250px',overflow:'hidden',whiteSpace: 'nowrap',textOverflow: 'ellipsis'}"
+                  :title="record.name"
                 >{{record.name}}</a>
               </div>
               <template slot="principal" slot-scope="text,record,index">
@@ -94,7 +104,7 @@ export default {
         {
           title: '项目编号',
           dataIndex: 'projectNo',
-          width: '200px',
+          width: '120px',
           sorter: true,
 
           scopedSlots: { customRender: 'projectNo' }
@@ -109,7 +119,7 @@ export default {
         {
           title: '负责人',
           dataIndex: 'principal',
-          width: '350px',
+          width: '150px',
           sorter: true,
           align: 'center',
           scopedSlots: { customRender: 'principal' }
@@ -117,7 +127,7 @@ export default {
         {
           title: '截止日期',
           dataIndex: 'endDate',
-          width: '350px',
+          width: '150px',
           sorter: true,
           align: 'center',
           // scopedSlots: { customRender: 'endDate' }
@@ -185,7 +195,7 @@ export default {
               count
             }
           }
-          Project(order_by:${this.order_byString},offset: $skip, limit: $pageSize) {
+          Project(where: {${_this.whereString}},order_by:${this.order_byString},offset: $skip, limit: $pageSize) {
             id
             name
             endDate
@@ -276,6 +286,20 @@ export default {
       order_byS += '}]'
       return order_byS
     },
+
+    onSearch(e) {
+      // console.log(e)
+      if(e){
+        var seaString = `{_or:[{projectNo:{_like:"%${e}%"}},{name:{_like:"%${e}%"}},{remark:{_like:"%${e}%"}},{principal:{name:{_like:"%${e}%"}}}]}`
+        this.whereString = `_and: [${seaString}]`
+      }else {
+        // seaString = ''
+        this.whereString = ''
+      }
+      this.defaultCurrent = 1
+      this.loadData()
+
+    }
 
   },
   watch: {

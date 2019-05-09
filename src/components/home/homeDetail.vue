@@ -2,7 +2,7 @@
   <div class="homeDetail">
     <a-row :style="{margin: '10px 0'}">
       <a-col :span="24">
-        <span>
+        <span style="color:#fff">
           <a-icon type="bell"/>消息公告：
         </span>
         <a>{{lastBell}}</a>
@@ -82,9 +82,13 @@
             :pagination="false"
             :dataSource="taskData"
           >
-            <div slot="name" slot-scope="text,record,index" class="taskName" :title="text">
+            <!-- <div slot="name" slot-scope="text,record,index" class="taskName" :title="text">
               <a @click="goProjectDetail(record.project,1)">{{text}}</a>
-            </div>
+            </div> -->
+            <span slot="name" slot-scope="text, record,index" class="taskName">
+              <a class="font-blue taskName" :title="text" v-if="record.type == 2" @click="goProjectDetail(record.project,1)">{{ text }}</a>
+              <a class="font-blue taskName" :title="record.title" v-else @click="goProjectDetail(record.project,1)">{{record.otherName}}</a>
+            </span>
             <div slot="checkFile" slot-scope="text, record,index">
               <a class="font-blue" style="margin-right:5px" v-if="record.type == 2 &&((record.parent || {}).files || []).length" @click="showFileDialog(record.parent.files)">查看</a>
               <a class="font-blue" style="margin-right:5px" v-else-if="record.files.length" @click="showFileDialog(record.files)">查看</a>
@@ -116,7 +120,7 @@
                   @click="submitTask(record)"
                 >提交</a>
                 <a
-                  v-if="(record.type===2)&&record.status===4"
+                  v-if="(record.type===2 || record.type == 5)&&record.status===4"
                   class="font-blue"
                   style="margin-right:5px"
                   @click="reviewTask(record)"
@@ -201,6 +205,7 @@ import TaskSubmit from '@/components/dialog/task/TaskSubmitDialog'
 import TaskReview from '@/components/dialog/task/TaskReviewDialog'
 import TaskFile from '@/components/dialog/task/TaskFileDialog'
 import moment from 'moment'
+import uuid from 'uuid'
 
 const statusObject = {
   0: '未开始',
@@ -222,14 +227,15 @@ const statusObject = {
 //   }
 
 const statusColor = {
-  0: '#ccc',
-  1: '#96ca85',
-  2: '#8bb8f1',
-  3: '#e2b241',
-  4: '#f09a5d',
-  5: '#f09a5d',
-  6: '#f09a5d'
+  0: '#aaa',
+  1: '#78bb59',
+  2: '#f19149',
+  3: '#d09c20',
+  4: '#5d9cec',
+  5: '#f19149',
+  6: '#f19149'
 }
+
 
 const taskColumns = [
   {
@@ -470,6 +476,26 @@ export default {
         }`
       //   console.log(queryString)
       let res = await this.dbConn.query(queryString)
+      res.data.Task.forEach(ele => {
+        if(ele.type != 2){
+          ele.otherName = ''
+          if(ele.numParent){
+            if(ele.numParent.parent){
+              ele.otherName += ele.numParent.parent.name + '-'
+            }
+            ele.otherName+=ele.numParent.name
+          }else if(ele.parent){
+            ele.otherName += ele.parent.name 
+          }
+          ele.otherName = `【${ele.name}】-` + ele.otherName
+          ele.title = ele.otherName + `-${ele.project.name}`
+
+          if(!ele.parent && !ele.numParent){
+            ele.otherName = ele.name + `-${ele.project.name}`
+            ele.title = ele.otherName
+          }
+        }
+      })
       this.taskData = res.data.Task
     },
     async projectList() {
@@ -629,7 +655,8 @@ export default {
           this.currentTask.type == 0 ? (this.currentTask.parent || {}).name : (this.currentTask.numParent || {}).name
         }】`
       }
-      this.subName = pName + this.currentTask.name
+      // this.subName = pName + this.currentTask.name
+      this.subName = record.otherName
       // console.log(this.subName)
       this.projectId = this.currentTask.project.id
       this.openSubmit = true
@@ -657,22 +684,23 @@ export default {
         return
       }
       // return
-
+      let newId = uuid()
       if (data) {
         var pName = ''
-        if (_this.currentTask.parent || _this.currentTask.numParent) {
-          pName = `【${
-            _this.currentTask.type == 0
-              ? (_this.currentTask.parent || {}).name
-              : (_this.currentTask.numParent || {}).name
-          }】`
-        }
+        // if (_this.currentTask.parent || _this.currentTask.numParent) {
+        //   pName = `【${
+        //     _this.currentTask.type == 0
+        //       ? (_this.currentTask.parent || {}).name
+        //       : (_this.currentTask.numParent || {}).name
+        //   }】`
+        // }
         var mutateString = `
           update_Task(_set: { status: 4 }, where: { id: {_eq:"${_this.currentTask.id}" }}) {
             returning {id}
           }
           insert_Task(
             objects: [{
+              id:"${newId}"
               project_id: "${_this.currentTask.project.id}"
               parent_id: "${_this.currentTask.id}" 
               type: ${data.type}
@@ -682,7 +710,7 @@ export default {
               submitAmount: ${data.submitAmount}
               approvedAmount: ${data.approvedAmount}
               unitPrice: ${data.unitPrice}
-              remark: "${data.remark}"
+              remark: "${(data.remark||'').replace(/\n/g,'')}"
               status: 4
               reviewResult: "-1",
               createdBy_id: "${_this.userInfo.id}",
@@ -696,20 +724,14 @@ export default {
         var notification2 = ''
 
         if ((_this.currentTask.project || {}).name) {
-          var summary = `【${_this.userInfo.name}】提交项目任务：【${pName}${
-            _this.currentTask.name
-          }】，让【${
+          var summary = `【${_this.userInfo.name}】提交项目任务：【${data.name}】，让【${
             data.handler.name
           }】进行审核`
-          var notification = `【${_this.userInfo.name}】提交了【${_this.currentTask.project.name}】项目中的【${pName}${
-            _this.currentTask.name
-          }】任务，需您审核`
-          var notification2 = `【${_this.userInfo.name}】提交了【${_this.currentTask.project.name}】项目中的【${pName}${
-            _this.currentTask.name
-          }】任务给【${data.handler.name}】审核，需您知晓`
+          var notification = `【${_this.userInfo.name}】提交了【${_this.currentTask.project.name}】项目中的【${data.name}】任务，需您审核`
+          var notification2 = `【${_this.userInfo.name}】提交了【${_this.currentTask.project.name}】项目中的【${data.name}】任务给【${data.handler.name}】审核，需您知晓`
         } else {
-          var notification = `【${_this.userInfo.name}】提交了【${_this.currentTask.name}】任务，需您审核`
-          var notification2 = `【${_this.userInfo.name}】提交了【${_this.currentTask.name}】任务给【${
+          var notification = `【${_this.userInfo.name}】提交了【${data.name}】任务，需您审核`
+          var notification2 = `【${_this.userInfo.name}】提交了【${data.name}】任务给【${
             data.handler.name
           }】审核，需您知晓`
         }
@@ -734,7 +756,9 @@ export default {
               {
                 type: 2
                 name: "${notification2}"
-                status: 0
+                status: 0,
+                project_id:"${this.projectId}",
+                task_id:"${newId}"
                 recipients: {
                   data: {recipient_id:"${ele.key}"}
                 }
@@ -746,7 +770,9 @@ export default {
         notificationString = `{
           type: 2
           name: "${notification}"
-          status: 0
+          status: 0,
+          project_id:"${this.projectId}",
+          task_id:"${newId}"
           recipients: {
             data: {recipient_id:"${data.handler.id}"}
           }
@@ -808,6 +834,7 @@ export default {
     reviewSave(data) {
       // debugger
       if (data) {
+        let newId = uuid()
         const _this = this
         var mutationString = ''
         if (data.isShowNextReview) {
@@ -817,7 +844,7 @@ export default {
           const statusName = data.reviewResult === 1 ? '通过' : '不通过'
           const unitPrice = data.reviewResult === 1 ? data.unitPrice : '' 
           // debugger
-          const taskName = data.type == 3 ? `[多]${_this.currentTask.name}` : _this.currentTask.name
+          const taskName = data.taskType == 3 ? `[多]${_this.currentTask.name}` : _this.currentTask.name
           //每一次审核都要添加纪要
           // 通过与否纪要
           const reviewSummary = `【${taskName}】任务审核由【${_this.currentTask.handler.name}】审核${statusName}`
@@ -856,21 +883,27 @@ export default {
               objects: [{
                 type: 2
                 name: "${notification}"
-                status: 0
+                status: 0,
+                project_id:"${_this.currentTask.project.id}",
+                task_id:"${_this.currentTask.id}"
                 recipients: {
                   data: {recipient_id:"${_this.currentTask.createdBy.id}"}
                 }
               },{
                 type: 2
                 name: "${notification2}"
-                status: 0
+                status: 0,
+                project_id:"${_this.currentTask.project.id}",
+                task_id:"${newId}"
                 recipients: {
                   data: {recipient_id:"${data.nextHandler.id}"}
                 }
-              },{
+              },{ #任务发起人/上级审核人
                 type: 2
                 name: "${notification3}"
-                status: 0
+                status: 0,
+                project_id:"${_this.currentTask.project.id}",
+                task_id:"${newId}"
                 recipients: {
                   data: {recipient_id:"${_this.currentTask.createdBy.id}"}
                 }
@@ -886,7 +919,7 @@ export default {
               _set: {
                 status: ${reviewStatus},
                 reviewResult: "${data.reviewResult}",
-                reviewComment: "${data.reviewComment}",
+                reviewComment: "${(data.reviewComment||'').replace(/\n/g,'')}",
                 reviewDate: "${data.reviewDate}",
                 unitPrice: ${data.unitPrice || 0}
               },
@@ -915,6 +948,7 @@ export default {
             # 新增下一级审核任务
             insert_Task(
               objects: [{
+                id:"${newId}"
                 project_id: "${_this.currentTask.project.id}"
                 ${_this.currentTask.parent ? `parent_id: "${_this.currentTask.parent.id}"` : ''}
                 type: ${data.type}
@@ -928,6 +962,7 @@ export default {
                 status: 4
                 reviewResult: "-1",
                 createdBy_id:"${_this.currentTask.createdBy.id}"
+                ${_this.currentTask.projectStep_id ? `projectStep_id:"${_this.currentTask.projectStep_id}"`:''}
               }]
             ) {
               returning {id}
@@ -941,7 +976,7 @@ export default {
           //审核结束
           const status = data.reviewResult === 1 ? 6 : 5
           const statusName = data.reviewResult === 1 ? '通过' : '不通过'
-          const taskName = data.type == 3 ? `[多]${_this.currentTask.name}` : _this.currentTask.name
+          const taskName = data.taskType == 3 ? `[多]${_this.currentTask.name}` : _this.currentTask.name
           const unitPrice = data.reviewResult == 1 ? data.unitPrice : '' 
           console.log(data.reviewResult == 1,data.unitPrice,'data.unitPrice')
           // debugger
@@ -956,7 +991,7 @@ export default {
 
 
           var updateProject = ``
-          if(status == 6 && data.type == 3){ //多级复核审核通过要改变项目的审定金额
+          if(status == 6 && data.taskType == 3){ //多级复核审核通过要改变项目的审定金额
             updateProject = `
               update_Project(where:{id:{_eq:"${_this.currentTask.project.id}"}},
               _set:{
@@ -979,15 +1014,71 @@ export default {
               objects: [{
                 type: 2
                 name: "${notification}"
-                status: 0
+                status: 0,
+                project_id:"${_this.currentTask.project.id}",
+                task_id:"${_this.currentTask.id}"
                 recipients: {
                   data: {recipient_id:"${_this.currentTask.createdBy.id}"}
-                }
+                },
+                createdBy_id:"${_this.userInfo.id}",
               }]
             ) {
               returning {id}
             }
           `
+
+
+          //
+          var updateProjectStatus = ''
+          var projectPause = ''
+          var projectSummary = ''
+          var projectStep = ""
+          var stepId = _this.currentTask.projectStep_id
+          if(data.type == 5 && status == 6){ //暂停任务通过后暂停项目
+            updateProjectStatus = `
+              updateProjectStatus:update_Project(where:{id:{_eq:"${_this.currentTask.project.id}"}},
+              _set:{
+                status:4
+              }){returning{id}}
+            `
+
+            projectPause = `
+              insert_ProjectPause(objects:[{
+                startTime:"${moment().format()}" 
+                createdBy_id:"${_this.userInfo.id}"  
+                project_id:"${_this.currentTask.project.id}"  
+                reason:"${data.remark}" 
+              }]){returning{id}}`
+
+              if(stepId){
+               projectStep =  `update_Step(where:{id:{_eq:"${stepId}"}},_set:{
+                  status: 4,
+                }){
+                  returning{
+                    id
+                  }
+                }`
+              }
+
+              projectSummary = `projectSummary:insert_Summary(objects:
+              [
+                ${
+                  stepId
+                    ? `{step_id:"${stepId}",content:"变更状态【暂停中】",createdBy_id:"${_this.userInfo.id}"},`
+                    : ''
+                }
+                
+                
+                {project_id:"${_this.currentTask.project.id}"content:"调整项目状态为暂停，暂停原因：${data.remark}",createdBy_id:"${_this.userInfo.id}"},
+                 
+              ]){
+              returning{
+                id
+              }
+            }`
+
+
+          }
 
           mutationString = `
             # 更新审核任务的审核意见为同意或者不同意，状态为审核通过/不通过
@@ -1036,11 +1127,16 @@ export default {
             ${allNotification}
             #更新审定金额
             ${updateProject}
+            #更新暂停项目
+            ${updateProjectStatus}
+            ${projectPause}
+            ${projectStep}
+            ${projectSummary}
           `
         }
 
       
-        console.log(mutationString, 'mutationString')
+        console.log(mutationString, 'mutationString',data.taskType)
         // return
         _this
           .mutateApollo(mutationString)
@@ -1057,7 +1153,7 @@ export default {
     reviewCancel() {
       this.openReview = false
     },
-    //更新任务状态
+     //更新任务状态
     updateTaskStatus(record, status) {
       record.status = status
       let notification = ''
@@ -1066,35 +1162,57 @@ export default {
       switch (status) {
         case 2: //接受
           if (record.type == 3) {
-            notification = `【${record.handler.name}】接受了【${record.project.name}】项目中的【[多]${
-              record.name
-            }】任务`
+            notification = `【${record.handler.name}】接受了【${record.project.name}】项目中的【[多]${record.otherName ||record.name}】任务`
           } else {
-            notification = `【${record.handler.name}】接受了【${record.project.name}】项目中的【${record.name}】任务`
+            notification = `【${record.handler.name}】接受了【${record.project.name}】项目中的【${record.otherName ||record.name}】任务`
           }
           recipients = [record.createdBy.id]
           break
         case 3: //拒绝
           if (record.type == 3) {
-            notification = `【${record.handler.name}】拒绝了【${record.project.name}】项目中的【[多]${
-              record.name
-            }】任务`
+            notification = `【${record.handler.name}】拒绝了【${record.project.name}】项目中的【[多]${record.otherName ||record.name}】任务`
           } else {
-            notification = `【${record.handler.name}】拒绝了【${record.project.name}】项目中的【${record.name}】任务`
+            notification = `【${record.handler.name}】拒绝了【${record.project.name}】项目中的【${record.otherName ||record.name}】任务`
           }
 
           recipients = [record.createdBy.id]
           break
         case 7: //完成任务
           if (record.type == 3) {
-            notification = `【${record.handler.name}】完成了【${record.project.name}】项目中的【[多]${
-              record.name
-            }】任务`
+            notification = `【${record.handler.name}】完成了【${record.project.name}】项目中的【[多]${record.otherName ||record.name}】任务`
           } else {
-            notification = `【${record.handler.name}】完成了【${record.project.name}】项目中的【${record.name}】任务`
+            notification = `【${record.handler.name}】完成了【${record.project.name}】项目中的【${record.otherName ||record.name}】任务`
           }
           recipients = [record.createdBy.id]
           break
+        // case 5: //审核未通过
+        //   if (record.type === 2) {
+        //     //任务审核
+        //     notification = `【${record.handler.name}】审核未通过了【${record.project.name}】项目中的【${
+        //       record.name
+        //     }】任务，审核意见为【${record.reviewComment}】`
+        //     recipients = [record.createdBy.id]
+        //   } else {
+        //     //项目多级复核
+        //     notification = `【${record.handler.name}】审核未通过了【${record.project.name}】项目中的【[多]${
+        //       record.name
+        //     }】任务，审核意见为【${record.reviewComment}】`
+        //     recipients = [record.createdBy.id]
+        //   }
+        //   break
+        // case 6: //审核通过
+        //   if (record.type === 2) {
+        //     //任务审核
+        //     notification = `【${record.handler.name}】审核通过了【${record.project.name}】项目中的【${record.name}】任务，审核意见为【${record.reviewComment}】`
+        //     recipients = [record.createdBy.id]
+        //   } else {
+        //     //项目多级复核
+        //     notification = `【${record.handler.name}】审核通过了【${record.project.name}】项目中的【[多]${
+        //       record.name
+        //     }】任务，审核意见为【${record.reviewComment}】`
+        //     recipients = [record.createdBy.id]
+        //   }
+        //   break
       }
 
       var mutateString = `
@@ -1111,7 +1229,9 @@ export default {
           objects: [{
             type: 2
             name: "${notification}"
-            status: 0
+            status: 0,
+            project_id:"${record.project.id}",
+            task_id:"${record.id}",
             recipients: {
               data: {recipient_id:"${recipients[0]}"}
             }
@@ -1197,6 +1317,7 @@ export default {
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: inline-block;
   white-space: nowrap;
 }
 .homeDetail .ant-table-small > .ant-table-content > .ant-table-body {

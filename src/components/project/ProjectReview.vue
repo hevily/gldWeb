@@ -855,15 +855,31 @@ export default {
     },
     //设置任务的最终状态
     setStepsStatus(value){
-      let i = 0
-      let now = 0
-      value.forEach((ele,index) => {
-        if(ele.length >= now){
-          i = index
-          now = ele.length
+      // debugger
+      let allData = []
+      value.forEach(e => {
+        e.forEach(el => {
+          allData.push(el)
+        })
+      })
+      let createdAt = ''
+      let index = 0
+      allData.forEach((e ,i)=> {
+        if(e.createdAt > createdAt){
+          index = i
+          createdAt = e.createdAt
         }
       })
-      return value[i][0].reviewResult
+     return allData[index].reviewResult
+      // let i = 0
+      // let now = 0
+      // value.forEach((ele,index) => {
+      //   if(ele.length >= now){
+      //     i = index
+      //     now = ele.length
+      //   }
+      // })
+      // return value[i][0].reviewResult
     },
     //设置审核状态颜色
     setStepAuditColor(col){

@@ -25,6 +25,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+  
   .footer {
     padding: 0 16px;
     margin: 48px 0 24px;
@@ -42,7 +43,8 @@ export default {
       }
     }
     .copyright {
-      color: rgba(0, 0, 0, 0.45);
+      // color: rgba(0, 0, 0, 0.45);
+      color: #fff;
       font-size: 14px;
     }
   }

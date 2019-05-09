@@ -177,6 +177,7 @@ export default {
       if (this.interval) {
         clearInterval(this.interval)
       }
+      _this.updateOnline()
       this.interval = setInterval(function() {
         console.log('this.settimeoutupdated')
         _this.updateOnline()
@@ -218,6 +219,10 @@ export default {
 
 <style scoped>
 .notification {
-  color: #c3dcf9;
+  /* color: #c3dcf9; */
+  color: #fff
+}
+.user-wrapper .user-dropdown-menu {
+  color: #fff
 }
 </style>

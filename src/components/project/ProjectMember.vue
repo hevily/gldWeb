@@ -65,17 +65,17 @@
           <h3>外部联系人</h3>
         </a-col>
         <a-col :span="12" style="text-align:right">
-          <a-button type="default" icon="plus">添加外部联系人</a-button>
+          <a-button type="default" icon="plus" @click="showEmployee(2,true)">添加外部联系人</a-button>
         </a-col>
       </a-row>
       <div :style="{marginTop:'10px'}" class="projectMemberTable">
         <a-table
-          :columns="columns"
+          :columns="columns2"
           :dataSource="external"
           :pagination="false"
           v-if="external.length"
         >
-          <a slot="name" slot-scope="text" href="javascript:;">{{ text }}</a>
+          <a slot="name" slot-scope="text,record" href="javascript:;">{{ text }}</a>
           <a-avatar
             slot="img"
             slot-scope="text, record"
@@ -92,13 +92,13 @@
             />
           </div>
           <div slot="icon" slot-scope="text, record" :style="{textAlign:'right'}">
-            <span :style="{padding:'2px',cursor:'pointer'}">
+            <span :style="{padding:'2px',cursor:'pointer'}" @click="deleteMember(record)">
               <a-icon type="delete"/>
             </span>
           </div>
         </a-table>
         <div v-else class="empty-tip">
-          <div :style="{fontSize:'50px'}">
+          <div :style="{fontSize:'50px'}" >
             <a-icon type="project"/>
           </div>
           <div>暂无数据</div>
@@ -160,6 +160,43 @@ const columns = [
     scopedSlots: { customRender: 'icon' }
   }
 ]
+const columns2 = [
+  {
+    dataIndex: 'img',
+    key: 'id',
+    width: 120,
+    scopedSlots: { customRender: 'img' }
+  },
+  {
+    title: '姓名',
+    width: 120,
+    dataIndex: 'name',
+    key: 'name'
+  },
+  {
+    title: '职务',
+    width: 120,
+    dataIndex: 'job',
+    key: 'job'
+  },
+  // {
+  //   title: '电话',
+  //   width: 160,
+  //   key: 'mobile',
+  //   dataIndex: 'mobile'
+  // },
+  {
+    title: '备注',
+    width: 420,
+    key: '_remark',
+    dataIndex: '_remark',
+    scopedSlots: { customRender: 'remark' }
+  },
+  {
+    key: 'icon',
+    scopedSlots: { customRender: 'icon' }
+  }
+]
 
 // //对象转字符串
 // function ObjectToString(obj) {
@@ -205,8 +242,10 @@ export default {
   data() {
     return {
       columns,
+      columns2,
       principal_id: '', //项目负责人id
       members: [], //项目成员
+      allMembers:[],
       chargers: [], //项目专业负责人
       allMember: [],
       external: [], //外部人员
@@ -215,6 +254,7 @@ export default {
       visibled: false,
       type: 1,
       employeeType: 0,
+      isExternal:false,
       projectName: '', //项目名称
       employeeFilter: [], //人员筛选
       sRecord: {}, //当前选中行,
@@ -249,6 +289,7 @@ export default {
                   charger_id
                   project_id
                   remark
+                  type
                   employee {
                     id
                     sex
@@ -288,8 +329,21 @@ export default {
     initInfo(data) {
       this.members = []
       this.chargers = []
+      this.external = []
       this.principal_id = data[0].principal_id
-      this.members = this.members.concat(data[0].members || [])
+      let members = data[0].members
+      this.allMembers = members
+      this.members = members.filter(ele => ele.type == 0)
+      // this.external = members.filter(ele => ele.type == 1)
+      members.forEach(ele => {
+        if(ele.type == 1){
+          ele.employee.member_id = ele.id
+          ele.employee._remark = ele.remark
+          var _employee = Object.assign({}, ele.employee)
+          this.external.push(_employee)
+        }
+      })
+      console.log(this.external)
       this.chargers = this.chargers.concat(data[0].chargers || [])
       this.projectName = data[0].name
       this.allMember = []
@@ -344,16 +398,21 @@ export default {
       console.log(this.allMember, this.defaultExpandedRowKeys,'this.defaultExpandedRowKeys','all project member')
     },
     //添加人员弹框
-    showEmployee(type) {
+    showEmployee(type,isExternal) {
+      console.log(type,isExternal)
       this.visibled = true
+      this.isExternal = isExternal
       this.employeeType = type
+      if(isExternal){
+        this.employeeType = 4
+      }
       this.employeeFilter = []
       if (type == 1) {
         this.chargers.forEach(ele => {
           this.employeeFilter.push(ele.charger_id)
         })
       } else if (type == 2) {
-        this.members.forEach(ele => {
+        this.allMembers.forEach(ele => {
           this.employeeFilter.push(ele.member_id)
         })
       }
@@ -363,6 +422,9 @@ export default {
       console.log(obj)
 
       this.visibled = obj.visibled
+      if(obj.isCancel){
+        return
+      }
       var data = []
       if (!obj.data.length) {
         return
@@ -373,7 +435,7 @@ export default {
       })
       if (this.employeeType == 1) {
         this.addChargers(data)
-      } else if (this.employeeType == 2) {
+      } else if (this.employeeType == 2 || this.employeeType == 4 ) {
         this.addMembers(data)
       }
     },
@@ -396,16 +458,18 @@ export default {
           charger_id:"${this.userInfo.id}",
           project_id:"${this.projectId}",
           member_id:"${ele.id}",
+          type: ${this.isExternal ? 1 : 0}
         },`
-        performString += `{
-          employee_id:"${ele.id}"
-          project_id:"${this.projectId}",
-          ratios:[{name:"专业系数",value: ""},{name:"难度系数",value: ""},{name:"规模系数",value: ""},{name:"绩效分",value: ""}],
-        }`
+        // performString += `{
+        //   employee_id:"${ele.id}"
+        //   project_id:"${this.projectId}",
+        //   ratios:[{name:"专业系数",value: ""},{name:"难度系数",value: ""},{name:"规模系数",value: ""},{name:"调整系数",value: ""},{name:"工期系数",value: ""}],
+        // }`
         notiString += `{
           type:3,
           name: "【${this.userInfo.name}】将您添加为【${this.projectName}】的项目组成员",
           status: 0,
+          project_id:"${this.projectId}",
           recipients:{
             data:{
               recipient_id:"${ele.id}"
@@ -417,9 +481,9 @@ export default {
       var mutationString = `insert_ProjectMember(objects:[${memberString}]){returning{id}}`
       var notificationString = `insert_Notification(objects:[${notiString}]){returning{id}}`
 
-      var performanceString = `insert_Performance(objects:[${performString}]){returning {id}}`
+      // var performanceString = `insert_Performance(objects:[${performString}]){returning {id}}`
       // console.log(mutationString,notificationString,'insert notification and projectMember string')
-      var total = mutationString + '\n' + notificationString + '\n' + performanceString
+      var total = mutationString + '\n' + notificationString
       // console.log(total,performanceString)
       // return
       var _this = this
@@ -450,12 +514,13 @@ export default {
         performString += `{
           employee_id:"${ele.id}"
           project_id:"${this.projectId}",
-          ratios:[{name:"专业系数",value: ""},{name:"难度系数",value: ""},{name:"规模系数",value: ""},{name:"绩效分",value: ""}],
+          ratios:[{name:"专业系数",value: ""},{name:"难度系数",value: ""},{name:"规模系数",value: ""},{name:"调整系数",value: ""},{name:"工期系数",value: ""}],
         }`
         notiString += `{
           type:3,
           name: "【${this.userInfo.name}】将您添加为【${this.projectName}】的项目组专业负责人",
           status: 0,
+          project_id:"${this.projectId}",
           recipients:{
             data:{
               recipient_id:"${ele.id}"
@@ -486,6 +551,7 @@ export default {
     //删除
     deleteMember(record) {
       console.log(record)
+      debugger
       var mutationString = ``
       var notificationString = ``
       var content = ''
@@ -519,6 +585,7 @@ export default {
           type:3,
           name: "【${_this.userInfo.name}】将您从【${_this.projectName}】的项目组${content}中移除",
           status: 0,
+          project_id:"${_this.projectId}",
           recipients:{
             data:{
               recipient_id:"${record.id}"

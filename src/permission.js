@@ -116,7 +116,7 @@ import { ACCESS_TOKEN } from '@/store/mutation-types'
 NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
 const whiteList = ['login', 'register', 'registerResult'] // no redirect whitelist
-
+// debugger
 router.beforeEach((to, from, next) => {
   NProgress.start() // start progress bar
   // console.log(Vue.ls.get,Vue.ls.get(ACCESS_TOKEN),'icon')
@@ -141,11 +141,23 @@ router.beforeEach((to, from, next) => {
           store.dispatch('IsSetRoute', true).then(() => {
             const redirect = decodeURIComponent(from.query.redirect || to.path)
             if (to.path === redirect) {
+              console.log(store.getters.addRouters,'store.getters.addRouters')
+              if(to.path == '/404'){
+                next({ path: '/' })
+              }else {
+                next({ ...to, replace: true })
+              } 
               // hack方法 确保addRoutes已完成 ,set the replace: true so the navigation will not leave a history record
-              next({ ...to, replace: true })
+              
             } else {
               // 跳转到目的路由
-              next({ path: redirect })
+              // debugger
+              if(to.path == '/404'){
+                next({ path: '/' })
+              }else {
+                next({ path: redirect })
+              }
+              
             }
           })
         })
